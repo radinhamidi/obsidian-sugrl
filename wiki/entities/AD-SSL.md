@@ -35,6 +35,13 @@ No augmentation. No negatives. No GNN forward pass during training.
 
 `O(N · d²)` — dominated by MLP forward/backward over all N nodes at all K depths. Propagation is a one-time preprocessing cost (~1 second on ogbn-arxiv).
 
+## Theoretical grounding (one-liner pointers)
+
+- Aggregation-reduces-variance and simplex-contraction geometry: [[Rethinking graph neural networks from a geometric perspective of node features]] (Ji et al., ICLR 2025) — used in [[Multi-Depth Views]] and [[Oversmoothing]].
+- Spectral low-pass interpretation of `Â^k`: SGC lineage (see [[Decoupled Precompute]]).
+
+Full motivation lives in [[Thesis]].
+
 ## Status
 
 Under ablation by Coding Agent. See [[Project Phases and Decision Gates]].

@@ -22,6 +22,8 @@ Core conceptual primitive of AD-SSL. Instead of augmentation, use pre-computed f
 
 A node's identity should be roughly consistent across depths (same class should emerge regardless of how wide the lens). The across-depth **disagreement** is precisely the structural-vs-semantic tension — training to bring views into agreement forces the encoder to learn structure-robust representations.
 
+**Theoretical backing.** [[Rethinking graph neural networks from a geometric perspective of node features]] §4 identifies *"feature aggregation is essential to reduce feature variance"* as a core function of graph-based aggregation, and shows (Theorem 1a) that successive aggregation concentrates per-node features toward class centroids in homophilic regimes — each depth `X_k` is thus a variance-reduced view of the same latent class signal, and aligning them is geometrically well-posed.
+
 ## Prior art
 
 - [[PolyGCL]] uses spectral polynomial filters as contrastive views (supervised learnable filters).

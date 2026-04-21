@@ -234,3 +234,8 @@ Not a baseline. Supervised, theoretical, heterophily-focused. Cite as theoretica
 ## [2026-04-21] note | Ji et al. 2025 propagation: Oversmoothing concept
 
 Added geometric-framing subsection to [[Oversmoothing]] citing Ji et al.'s simplex-contraction interpretation alongside the spectral (Oono & Suzuki) framing. Gives AD-SSL's spectral-motivation paragraph a theoretical-pluralism hook without changing the mechanism claim.
+
+## [2026-04-21] note | Ji et al. 2025 propagation: Multi-Depth Views + AD-SSL
+
+- [[Multi-Depth Views]]: added "Theoretical backing" paragraph citing Ji et al. §4 (aggregation reduces feature variance) and Theorem 1a (successive aggregation concentrates toward class centroid) as geometric grounding for why depth views are a valid contrastive signal.
+- [[AD-SSL]]: added "Theoretical grounding" pointer section linking Multi-Depth Views + Oversmoothing to the Ji et al. framework. Kept lean — full motivation stays in [[Thesis]].
