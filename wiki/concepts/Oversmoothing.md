@@ -10,6 +10,11 @@ updated: 2026-04-21
 
 Repeated graph propagation (`Â^k X` as k → ∞) converges to a degree-weighted average, flattening node distinctions. Empirically, node classification accuracy collapses past some k.
 
+## Theoretical framings
+
+- **Spectral** (Oono & Suzuki 2020): propagation acts as low-pass filter; eigenvalues < 1 decay under powers of Â.
+- **Geometric** ([[Rethinking graph neural networks from a geometric perspective of node features]], Ji et al. ICLR 2025): the class-centroid simplex Δ_e^(t) contracts under an iterated Markov mixing map `e_c^(t+1) = Σ_{c'} α_{c,c'} e_{c'}^(t)`, collapsing to a single point as t → ∞. Visualizable, same conclusion as the spectral view from a different direction.
+
 ## In our work
 
 [[Prepropx Depth Finding]]: SUGRL's U-curve over k ∈ {1..6} peaks at k=3 and drops below baseline past k=5. This is oversmoothing at the level of linear probe accuracy.

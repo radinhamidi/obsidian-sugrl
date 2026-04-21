@@ -230,3 +230,7 @@ Propagations:
 - [[index]]: added entry under baselines/prior methods section.
 
 Not a baseline. Supervised, theoretical, heterophily-focused. Cite as theoretical prior + scope-justification support.
+
+## [2026-04-21] note | Ji et al. 2025 propagation: Oversmoothing concept
+
+Added geometric-framing subsection to [[Oversmoothing]] citing Ji et al.'s simplex-contraction interpretation alongside the spectral (Oono & Suzuki) framing. Gives AD-SSL's spectral-motivation paragraph a theoretical-pluralism hook without changing the mechanism claim.
