@@ -38,7 +38,8 @@ Note: the SUGRL paper itself reports two numbers (full-batch 68.8, mini-batch 69
 
 | Method | Accuracy | Cost class |
 |---|---:|---|
-| [[GGD]] | ? | < 1 s |
+| [[GGD]] (h=256) | 70.3 ± 0.3 | 0.18 s (+6.26 s pre) |
+| [[GGD]] (h=1500) | **71.6 ± 0.5** | 0.95 s (+6.26 s pre) |
 | [[SUGRL]] (k=1 / k=3) | 68.77 / 69.57 | < 1 s |
 | [[GraphACL]] | ~70 | sec–min |
 | [[PolyGCL]] | ~70.5 | sec–min |
@@ -46,4 +47,7 @@ Note: the SUGRL paper itself reports two numbers (full-batch 68.8, mini-batch 69
 | [[GraphMAE]] | ~71.7 | sec–min |
 | [[GraphMAE2]] | ~72.7 | sec–min |
 
-AD-SSL target: **≥ 71 at < 60 s.**
+AD-SSL target: **≥ 71 at < 60 s.** Note: this is now a *weaker* bar than originally framed —
+GGD-1500 already hits 71.6 in 0.95s. To have a story, AD-SSL should aim for **≥ 71.5 at GGD-256 cost**,
+or materially exceed 71.6 while staying sub-minute, or win on per-node adaptivity / heterophily. See
+[[Pareto Gap]] for the revised framing.

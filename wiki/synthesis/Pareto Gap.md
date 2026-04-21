@@ -15,22 +15,29 @@ Framing for the paper's problem statement.
 - **x-axis:** wall-clock (or per-epoch cost) on ogbn-arxiv.
 - **y-axis:** accuracy on ogbn-arxiv (linear probe on frozen embeddings).
 
-## The frontier (sketch)
+## The frontier (sketch — corrected 2026-04-21 after GGD ingest)
 
 ```
   acc
   72 |                     ● GraphMAE2
-  71 |              ● BGRL   ● GraphMAE
-  70 |                           ● GraphACL  ● PolyGCL
-  69 |  ● SUGRL(k=3 corrected)
+  71 |  ● GGD-1500  ● BGRL   ● GraphMAE
+  70 |  ● GGD-256         ● GraphACL  ● PolyGCL
+  69 |  ● SUGRL(k=3)
   68 |  ● SUGRL(k=1)
-     |
-     |  ● GGD
      +————————————————————————————————— time
         0.2s   1s    10s   1min   10min+
 ```
 
-**Top-left (accurate + fast) is empty.** This is where AD-SSL aims. See [[Competitive Landscape 2026]] for the numeric table.
+**The gap is narrower than originally framed.** GGD at hidden=1500 already reaches
+**71.6 ± 0.5 in 0.95s** on ogbn-arxiv (Table 8 of their paper). GGD-256 gets 70.3 in 0.18s.
+So "BGRL accuracy at GGD cost" is *partially already achieved* by scaling GGD's hidden size — the
+top-left region is not empty, it's sparse. AD-SSL must either:
+1. **Push past 71.6** at comparable cost (then frame as "new Pareto point").
+2. **Match 71.6 at materially lower cost** (e.g. smaller model, no inference-time global power).
+3. **Add structural wins GGD cannot**: per-node adaptivity, heterophily robustness, theoretical grounding,
+   principled multi-depth (rather than single-n post-hoc `A^n H_θ`).
+
+See [[Competitive Landscape 2026]] for the numeric table and [[GGD]] §"Open risks this paper raises for our thesis".
 
 ## Why the gap exists
 
@@ -43,7 +50,9 @@ Accurate methods pay for accuracy with augmentations / generative decoders / mul
 Fast methods pay for speed with weaker inductive signal:
 
 - [[SUGRL]] — MLP on precomputed 1-hop features, margin triplet. Fixed shallow propagation.
-- [[GGD]] — binary discrimination on a single global signal. Even less structure.
+- [[GGD]] — binary discrimination on a single global signal. Cheapest loss, but note: GGD *does*
+  inject one fixed-depth propagation at inference (`H_final = H_θ + A^5 H_θ`) — a weak, post-hoc
+  version of multi-depth views. AD-SSL's pitch is that making this learnable and per-node wins.
 
 ## How AD-SSL closes the gap
 

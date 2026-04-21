@@ -50,7 +50,13 @@ Major update. Paper is v3 (2026-03-20) with full author list (Zhao, Ji, Dai, Ma,
 
 Deepened [[ATP]] entity page. Mechanism is 2-part: High-Deg edge masking (HPC) + weight-free scalar r̃ per node via degree+eigenvector+clustering in the kernel `D̂^(r̃−1) Â D̂^(−r̃)`. **Supervised, single kernel, scalar-per-node.** Our K-view per-node-per-depth α mixture in SSL regime is distinct. Added dedicated reviewer-defense row for "this is just ATP in SSL." ATP's HPC flagged as possible preprocessing adoption (open question).
 
-## [2026-04-21] note | Tier 1 ingest pass (3/7 complete)
+## [2026-04-21] ingest | GGD (paper PDF)
+
+Deepened [[GGD]] entity page with exact numbers. **Critical finding**: GGD at hidden=1500 reaches **71.6 ± 0.5 in 0.95s** on ogbn-arxiv (Table 8) — our onboarding's framing of "BGRL accuracy at GGD cost" as an empty Pareto point is too loose. Updated [[Pareto Gap]] frontier sketch, [[ogbn-arxiv]] competitive table, and added a reviewer-defense row for "GGD-1500 already closed this gap." Also noted GGD's inference-time `H_final = H_θ + A^5 H_θ` trick — a weak, post-hoc single-depth version of our multi-depth views; strengthens our motivation but also raises "is multi-depth just GGD's power trick scaled up?" as a defense-needed question.
+
+ogbn-papers100M numbers captured: GGD 63.5 test in 9h15m vs BGRL 62.1 in 26h28m — GGD is the right cost anchor at OGB-LSC scale.
+
+## [2026-04-21] note | Tier 1 ingest pass (4/7 complete)
 
 Wiki now has ~30 pages covering the thesis, competitive landscape,
 preliminary results, and reviewer-defense map. Ready for Coding Agent to
