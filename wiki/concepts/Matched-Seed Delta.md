@@ -20,7 +20,9 @@ This cancels seed noise that would otherwise dominate the difference. Standard p
 
 A variant is called **ROBUST** iff:
 - `mean(δ) > 0.3`
-- AND `seeds_positive = all seeds` (currently 3/3; will be 5/5 for final tables).
+- AND `seeds_positive = all seeds` (**5/5** under the locked protocol; see [[Splits and Protocol]]).
+
+The [[Preliminary Validation - 168 Runs]] results used 3 seeds — those numbers remain valid under the old protocol and should be read with 3/3 as the bar; every new ablation uses 5/5.
 
 ## Weaker categories
 

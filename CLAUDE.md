@@ -109,6 +109,7 @@ When you initiate an inquiry to the Coding Agent, fill only the `# INQUIRY` sect
   - `wiki/synthesis/Reviewer Attacks and Defenses.md` — anticipated objections + required evidence.
   - `wiki/synthesis/Novelty Verification Checklist.md` — per-claim 🔴/🟡/🟢 ablations; holds queued CA inquiries.
   - `wiki/synthesis/Project Phases and Decision Gates.md` — phase map + gates.
+  - `wiki/synthesis/Splits and Protocol.md` — locked split policy (Option B), early-stopping defaults, 5 trials on every dataset.
 - **Scope is locked (2026-04-21)**: homophilic graphs only, per-dataset training. Heterophily and cross-graph transfer are explicitly out of scope for v1. See `wiki/synthesis/Thesis.md` § Scope.
 
 ## Audit discipline (numerical claims)

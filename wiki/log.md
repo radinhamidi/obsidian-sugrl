@@ -208,3 +208,9 @@ Added: (1) paper-vs-vault codename clarification (AD-SSL = paper, SUGRL = legacy
 ## [2026-04-21] inquiry-answer | INQ-2026-04-21-001 classification val splits
 
 Answered CA's 6-question inquiry on split policy for classification early stopping. Decision: **Option B across the board** (public Planetoid splits, 10/10/80 seed-determined splits on Photo/Computers with 20 seeds, official OGB splits). Early stopping: eval_every=10, patience=20, min_delta=0.0, epochs as upper bound. ogbn-mag dropped from main table (out of scope per [[Thesis]] § Scope). Appendix sanity check: report final-epoch vs best-val-checkpoint test-acc on ogbn-arxiv to detect val-leakage drift. Created [[Splits and Protocol]] as the canonical wiki record.
+
+## [2026-04-21] note | Propagate 5-trial protocol; add Splits-and-Protocol to CLAUDE.md
+
+- [[Ablation Plan - AD-SSL B0 A1-A4]] § Seeds: dropped "3 for screening, 5 for headline" in favor of **5 trials everywhere**; updated ROBUST criterion to 5/5.
+- [[Matched-Seed Delta]]: ROBUST bar now 5/5 under the locked protocol; prior 168-run results remain valid at 3/3 for the old protocol.
+- CLAUDE.md: added [[Splits and Protocol]] to canonical landing pages list.

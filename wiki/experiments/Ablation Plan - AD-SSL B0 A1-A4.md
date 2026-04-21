@@ -38,11 +38,11 @@ k ∈ {1, 2, 4, 8}. Rationale: exponential spacing covers the useful U-curve reg
 
 ## Seeds
 
-3 seeds for ablation screening. Scale to 5 seeds for final headline table.
+**5 trials everywhere.** Locked 2026-04-21 in [[Splits and Protocol]] — one seed-count across screening and headline table keeps comparisons paired and avoids double budgeting.
 
 ## Decision criterion per config
 
-Significance per [[Matched-Seed Delta]]: ROBUST = mean(Δ) > 0.3 AND 3/3 seeds positive (vs B0).
+Significance per [[Matched-Seed Delta]]: ROBUST = mean(Δ) > 0.3 AND 5/5 seeds positive (vs B0).
 
 ## Gate 1 test
 
