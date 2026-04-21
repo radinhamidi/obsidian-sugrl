@@ -6,35 +6,55 @@ updated: 2026-04-21
 
 # SUGRL Wiki Index
 
-Catalog of every page in this wiki. Read this first when answering a query;
-drill into specific pages from here.
+Catalog of every page in this wiki. Read first when answering a query; drill into specific pages from here.
 
 ## Synthesis
 
-<!-- cross-cutting analyses, thesis, comparison tables, protocols -->
-
-_(empty — add pages as they are written)_
+- [[Thesis]] — AD-SSL one-sentence claim, mechanism, novelty, outcomes, risks.
+- [[Competitive Landscape 2026]] — efficiency champions, accuracy leaders, concurrent work, supervised adaptive-depth priors.
+- [[Pareto Gap]] — framing of the empty accuracy-×-cost region AD-SSL targets.
+- [[Reviewer Attacks and Defenses]] — anticipated reviewer objections and required evidence.
+- [[Project Phases and Decision Gates]] — phase map, Gate 1/2/3, agent communication rules.
 
 ## Experiments
 
-<!-- experiment designs, hypotheses, results summaries, ablation plans -->
+- [[Preliminary Validation - 168 Runs]] — 2026-04-10 results: 6 brainstorm ideas + sampling control + depth variants on unmodified SUGRL.
+- [[Prepropx Depth Finding]] — the +0.80 on ogbn-arxiv from k=1→k=3 that motivates the paper.
+- [[Ablation Plan - AD-SSL B0 A1-A4]] — planned Phase 2 ablation (owned by Coding Agent).
 
-_(empty)_
+## Entities — our method
 
-## Entities
+- [[AD-SSL]] — our proposed method.
 
-<!-- methods, models, datasets, benchmarks, author-groups -->
+## Entities — baselines and prior methods
 
-_(empty)_
+- [[SUGRL]] — starting-point method (AAAI 2022).
+- [[GGD]] — efficiency champion (NeurIPS 2022).
+- [[BGRL]] — accuracy ceiling, bootstrap-style (ICLR 2022).
+- [[GraphMAE]] — accuracy ceiling, generative (KDD 2022).
+- [[GraphMAE2]] — current accuracy leader (WWW 2023).
+- [[GraphACL]] — augmentation-free, heterophily (NeurIPS 2023).
+- [[PolyGCL]] — spectral polynomial views (ICLR 2024).
+- [[Less is More]] — **closest concurrent work** (arxiv / ICLR 2026 submission).
+- [[GPRGNN]] — learned global polynomial coefficients, supervised (ICLR 2021).
+- [[APPNP]] — teleport-based propagation, supervised (ICLR 2019).
+- [[ATP]] — per-node adaptive propagation, supervised (2024).
+- [[SGC]] — origin of the decoupled precompute trick (ICML 2019).
+
+## Entities — datasets
+
+- [[ogbn-arxiv]] — headline decision-gate dataset.
 
 ## Concepts
 
-<!-- technical concepts, techniques, theoretical tools -->
-
-_(empty)_
+- [[Decoupled Precompute]] — SGC-style preprocessing.
+- [[Multi-Depth Views]] — core primitive of AD-SSL.
+- [[Adaptive Depth Weighting]] — per-node α_{i,k} mechanism (A1/GRPO-style).
+- [[Bootstrap Loss]] — BYOL-style training across depth pairs.
+- [[Matched-Seed Delta]] — our significance criterion.
+- [[Oversmoothing]] — theoretical ceiling on depth.
 
 ## Sources
 
-<!-- one summary per ingested paper / article -->
-
-_(empty)_
+- [[RESEARCH_AGENT_ONBOARDING]] — project brief (2026-04-21).
+- [[VALIDATION_ORIGINAL_CODE]] — 168-run preliminary validation report (2026-04-10).
