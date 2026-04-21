@@ -59,4 +59,4 @@ Keep this honest. "Do not evaluate" not "do not scale to."
 
 - ICLR 2026 decision (accept/reject changes citation weight).
 - arxiv v4+: any addition of multi-depth, per-node weighting, or OGB datasets.
-- Related group: Ji et al., ICLR 2025, "Rethinking graph neural networks from a geometric perspective of node features." Same last-author (Tay). Theoretical foundation for their noise argument. Should ingest.
+- Related group: Ji et al., ICLR 2025 ([[Rethinking graph neural networks from a geometric perspective of node features]]). Confirmed same last author (Tay, NTU). Provides the feature-centroid-simplex theory underpinning Less is More's Prop. 2. Ingested 2026-04-21.

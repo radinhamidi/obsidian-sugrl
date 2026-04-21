@@ -45,6 +45,7 @@ Catalog of every page in this wiki. Read first when answering a query; drill int
 - [[SGC]] — origin of the decoupled precompute trick (ICML 2019).
 - [[BLNN]] — BGRL + neighbor-positive alignment with attention supportiveness (arXiv 2024); small-graph evaluation only.
 - [[GRAPHITE]] — graph preprocessor for heterophily via feature nodes (ICLR 2026); out of AD-SSL scope but flagged for completeness.
+- [[Rethinking graph neural networks from a geometric perspective of node features]] — Ji et al. ICLR 2025; feature-centroid-simplex theory cited by [[Less is More]] (same Tay/NTU group).
 
 ## Entities — datasets
 

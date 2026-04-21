@@ -214,3 +214,19 @@ Answered CA's 6-question inquiry on split policy for classification early stoppi
 - [[Ablation Plan - AD-SSL B0 A1-A4]] § Seeds: dropped "3 for screening, 5 for headline" in favor of **5 trials everywhere**; updated ROBUST criterion to 5/5.
 - [[Matched-Seed Delta]]: ROBUST bar now 5/5 under the locked protocol; prior 168-run results remain valid at 3/3 for the old protocol.
 - CLAUDE.md: added [[Splits and Protocol]] to canonical landing pages list.
+
+## [2026-04-21] ingest | Ji et al., "Rethinking GNNs from a Geometric Perspective of Node Features" (ICLR 2025)
+
+Ingested PDF (raw/papers/rethinking-geometric-node-features.pdf). Replaced stub with full entity page covering:
+- Feature centroid simplex construction (§2) — class-centroid convex hull, coarse geometry (regular vs degenerate simplex models).
+- Theorems 1-2 linking aggregated features to simplex vertices; Corollary 1 establishing intrinsic feature-space limits on datasets like Actor.
+- Geometric interpretation of oversmoothing (§4) as iterated Markov contraction of Δ_e.
+- Practical tricks -AE (random intra-class edge insertion + very early stopping) and -AEN (L2 feature normalization); Table 2 numbers on heterophilic datasets captured.
+- Confirmed: same last author (Wee Peng Tay, NTU) as [[Less is More]] → citation weight in related work.
+
+Propagations:
+- [[Less is More]] and [[AD-SSL vs Less is More]]: marked ingestion done, confirmed same-group attribution.
+- [[Reviewer Attacks and Defenses]] "Only tested on homophilic graphs" row: added Corollary-1 (intrinsic feature-space limit on Actor) as theoretical backing for scope decision.
+- [[index]]: added entry under baselines/prior methods section.
+
+Not a baseline. Supervised, theoretical, heterophily-focused. Cite as theoretical prior + scope-justification support.

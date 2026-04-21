@@ -71,7 +71,7 @@ Robustness angle: they claim strong robustness under adversarial attacks (Table 
 
 - ICLR 2026 acceptance decision.
 - v4+ of the paper (especially: any extension to multi-depth, per-node weighting, or standard OGB datasets).
-- Ji et al. 2025 ([[Rethinking graph neural networks from a geometric perspective of node features]], ICLR 2025) — cited heavily for Prop. 2, likely same group. Worth ingesting.
+- Ji et al. 2025 ([[Rethinking graph neural networks from a geometric perspective of node features]], ICLR 2025) — cited heavily for Prop. 2, **confirmed same group (Tay, NTU)**. Fully ingested 2026-04-21; see that page for the feature-centroid-simplex framework underpinning their noise argument.
 
 ## Risks to our novelty
 
