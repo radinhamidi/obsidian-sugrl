@@ -239,3 +239,8 @@ Added geometric-framing subsection to [[Oversmoothing]] citing Ji et al.'s simpl
 
 - [[Multi-Depth Views]]: added "Theoretical backing" paragraph citing Ji et al. §4 (aggregation reduces feature variance) and Theorem 1a (successive aggregation concentrates toward class centroid) as geometric grounding for why depth views are a valid contrastive signal.
 - [[AD-SSL]]: added "Theoretical grounding" pointer section linking Multi-Depth Views + Oversmoothing to the Ji et al. framework. Kept lean — full motivation stays in [[Thesis]].
+
+## [2026-04-21] note | CLAUDE.md updated (ingest + inter-agent sections)
+
+- Ingest section rewritten: explicit method-page-vs-source-page split (entities/ for methods like BGRL/PolyGCL/BLNN; sources/ for benchmarks/position/onboarding); added `pdftotext -layout` step; added post-ingest audit step pointing to the Audit-discipline section.
+- New "Inter-agent protocol alignment" subsection: when an inquiry locks a protocol decision, propagate to every dependent page and grep for stale values before closing. Reference example: INQ-2026-04-21-001's 5-trial lock propagated to Ablation Plan + Matched-Seed Delta.

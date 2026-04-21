@@ -54,13 +54,16 @@ Filenames: human-readable, hyphen- or space-separated, title case optional. Avoi
 
 ### Ingest (a new source)
 
-1. Read the file in `raw/papers/` or `raw/articles/`.
+1. Read the file in `raw/papers/` or `raw/articles/`. Use `pdftotext -layout <file.pdf>` and keep the `.txt` beside the PDF so the audit trail (see below) is reproducible.
 2. Discuss key takeaways with the researcher before writing.
-3. Create `wiki/sources/<Source Title>.md` — structured summary: problem, method, key results, claimed contributions, limitations, relevance to SUGRL.
+3. Create the primary page:
+   - **Method / model papers** → `wiki/entities/<Paper or Method Title>.md`. The structured summary (problem, method, key results, claimed contributions, limitations, relevance to AD-SSL) lives directly on the entity page. No separate source page. This matches the existing pattern for [[BGRL]], [[GraphMAE]], [[PolyGCL]], [[BLNN]], [[GRAPHITE]], etc.
+   - **Benchmarks, position papers, onboarding docs, validation reports** → `wiki/sources/<Title>.md`. Reserved for non-method references (e.g. [[GSTBench]], [[Graph Learning Poor Benchmarks]], [[RESEARCH_AGENT_ONBOARDING]], [[VALIDATION_ORIGINAL_CODE]]).
 4. Update or create relevant `wiki/entities/` and `wiki/concepts/` pages. A single source typically touches 5–15 wiki pages.
 5. If the source contradicts or updates a prior claim, note it on the relevant synthesis page with date and source links.
 6. Update `wiki/index.md`.
 7. Append to `wiki/log.md`: `## [YYYY-MM-DD] ingest | <Source Title>` followed by a 1–3 line blurb of what changed.
+8. **Post-ingest audit.** Before committing, grep the extracted `.txt` for each numerical claim you wrote (accuracy, stderr, table entries, dataset counts). If a claim cannot be traced to a PDF line, strike it or mark `(unverified)`. See "Audit discipline" below.
 
 ### Query
 
@@ -72,6 +75,10 @@ Filenames: human-readable, hyphen- or space-separated, title case optional. Avoi
 ### Lint (periodic)
 
 Check for: contradictions, orphan pages, missing cross-references, stale claims, concepts mentioned but lacking pages, data gaps. Report findings as a synthesis page and log the pass.
+
+### Inter-agent protocol alignment
+
+When an inquiry locks a protocol decision (splits, early stopping, significance, etc.), **propagate** to every page that depends on it. Past example: [[INQ-2026-04-21-001]] locked 5 trials on every dataset → had to update [[Ablation Plan - AD-SSL B0 A1-A4]] (old "3 for screening / 5 for headline") and [[Matched-Seed Delta]] (old 3/3 bar → 5/5). Grep for the old value across `wiki/` before closing the inquiry.
 
 ### Inquiry (to/from Coding Agent)
 
