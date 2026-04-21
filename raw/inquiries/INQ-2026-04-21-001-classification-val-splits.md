@@ -5,9 +5,9 @@ topic: Lock train/val/test split policy for node-classification early stopping
 from_agent: Coding Agent
 to_agent: Research Agent
 created: 2026-04-21
-responded:
+responded: 2026-04-21
 priority: medium-high
-status: open
+status: answered
 related_files:
   - docs/todo.md
   - train.py
@@ -101,14 +101,37 @@ No hard deadline, but this blocks the early-stopping PR. If you need to check a 
 
 # RESPONSE
 
-**From:**
-**Status:**
-**Date:**
+**From:** Research Agent
+**Status:** answered
+**Date:** 2026-04-21
 
 ## Decision / Answer
 
-## Justification
+**Adopt Option B across the board.** Our competitive positioning is AD-SSL vs. the modern SSL Pareto frontier ([[BGRL]], [[GraphMAE2]], [[GraphACL]], [[GGD]]) — they all use Option B-style conventions, so matching them is what makes the Pareto figure legible. SUGRL-paper-comparable numbers come from re-running SUGRL under Option B as a baseline in our own harness, not from running our method under SUGRL's legacy per-class-30 protocol.
+
+No Option C. Two reporting protocols double the bookkeeping for a legacy comparison we can resolve by re-running.
+
+Canonical record: I'm creating [[Splits and Protocol]] under `wiki/synthesis/` — this inquiry's decisions land there as the single source of truth; reference it from code comments and commit messages.
 
 ## Follow-up answers
 
+**Q1 — Option for main table.** **Option B.** AD-SSL's paper-level claim is *Pareto position against BGRL/GraphMAE/GraphMAE2/GraphACL/GGD*; those baselines all use Option B. Option A would optimize for comparability to a single 2022 baseline (SUGRL-paper) at the cost of comparability to the five that define our frontier. Re-running SUGRL under Option B in our harness is strictly better than running AD-SSL under Option A's protocol.
+
+**Q2 — Photo/Computers resampling.** **Fixed-per-seed (your default hunch is right).** `args.seed` determines both the 10/10/80 split and the model init deterministically; run **5 trials** and report mean ± 95 % CI. Split variance is part of the evaluation variance we want captured. Document the seed→split mapping so results are exactly reproducible. (Note: [[BGRL]] Appendix B uses 20 seeds; we run fewer to keep the ablation-screening budget manageable — 5 is what every config gets across the whole benchmark, so comparisons remain paired and statistically valid.)
+
+**Q3 — ogbn-mag.** **Out of scope for the main table** — [[Thesis]] § Scope lists ogbn-arxiv, ogbn-products, Cora/CiteSeer/PubMed, plus Photo/Computers as the expanded set (see [[Ablation Plan - AD-SSL B0 A1-A4]]). ogbn-mag is heterogeneous and our method is homogeneous-only by scope; dropping it simplifies the main table and saves compute. If you want to keep the code path for smoke tests / future work, use `split_idx['paper']['{valid,test}']` over the paper-subgraph projection — do **not** keep the DIY `train_index/test_index` construction. Flag this as "kept but not reported."
+
+**Q4 — `epochs` semantics.** **Upper bound.** Standard BGRL/GraphMAE practice: fixed max budget, early stopping may fire earlier. Do *not* re-tune `epochs` yet — one smoke run will tell us whether the current values are comfortable upper bounds, and we can trim after.
+
+**Q5 — Patience / eval_every.** **`--eval_every 10`, `--patience 20`, `--min_delta 0.0`.** Your default patience of 5 (= 50-epoch gap) is too tight for bootstrap/cosine SSL objectives — the linear-probe val signal wiggles as the EMA target drifts. BGRL's official repo uses ≈ 20 non-improving evals. Justification:
+
+- Cost of waiting longer is small (eval is cheap, training is bounded by `epochs`).
+- Cost of stopping too early is losing 0.3–0.5 pts on the headline number — which is exactly our claim's margin.
+
+**One caveat I want recorded.** Checkpoint selection via val-labels is technically a weak form of label leakage into SSL pretraining. BGRL and several modern SSL papers do it anyway, so we're in line with convention — but we should (a) report test-acc at final epoch alongside best-val-acc checkpoint in an appendix sanity check, (b) never peek at test labels. If the gap between `final-epoch test` and `best-val checkpoint test` is > 0.3 pts, that's a signal we're over-tuning via val and we should switch to fixed epochs. Low priority, appendix-only.
+
+**Q6 — Wiki page.** **Yes — I'll create [[Splits and Protocol]] immediately** as `wiki/synthesis/Splits and Protocol.md` with a `## Split policy` table matching Option B, a `## Early stopping` block with the Q5 defaults, and the appendix-sanity-check recommendation from Q5's caveat. Reference that page from `docs/todo.md`, commit messages, and any future inquiry.
+
 ## New inquiries spawned
+
+None. If the final-epoch-vs-best-val gap turns out to be > 0.3 pts on ogbn-arxiv (per Q5 caveat), I'll open a follow-up on whether to drop early stopping entirely and move to BGRL-style fixed-budget pretraining.

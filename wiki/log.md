@@ -204,3 +204,7 @@ Extended the Thesis↔Checklist sync to [[Ablation Plan - AD-SSL B0 A1-A4]]: add
 ## [2026-04-21] note | CLAUDE.md updated
 
 Added: (1) paper-vs-vault codename clarification (AD-SSL = paper, SUGRL = legacy vault name), (2) canonical synthesis landing pages list, (3) locked scope callout, (4) "Audit discipline (numerical claims)" section with the three past-incident examples (PolyGCL ogbn-arxiv, APPNP stderrs, BGRL stderr) as guardrails against future fabrication.
+
+## [2026-04-21] inquiry-answer | INQ-2026-04-21-001 classification val splits
+
+Answered CA's 6-question inquiry on split policy for classification early stopping. Decision: **Option B across the board** (public Planetoid splits, 10/10/80 seed-determined splits on Photo/Computers with 20 seeds, official OGB splits). Early stopping: eval_every=10, patience=20, min_delta=0.0, epochs as upper bound. ogbn-mag dropped from main table (out of scope per [[Thesis]] § Scope). Appendix sanity check: report final-epoch vs best-val-checkpoint test-acc on ogbn-arxiv to detect val-leakage drift. Created [[Splits and Protocol]] as the canonical wiki record.

@@ -17,6 +17,7 @@ Catalog of every page in this wiki. Read first when answering a query; drill int
 - [[AD-SSL vs Less is More]] — dedicated differentiation page against closest concurrent work.
 - [[Novelty Verification Checklist]] — per-claim ablations required to defend AD-SSL vs prior art; tagged 🔴/🟡/🟢.
 - [[Project Phases and Decision Gates]] — phase map, Gate 1/2/3, agent communication rules.
+- [[Splits and Protocol]] — locked train/val/test splits + early-stopping policy (Option B; 5 trials on every dataset).
 
 ## Experiments
 
