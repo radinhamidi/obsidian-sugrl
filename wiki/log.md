@@ -38,7 +38,19 @@ negatives catastrophic. Baselines reproduce paper within 1–2σ.
 
 Created: [[Preliminary Validation - 168 Runs]], [[Prepropx Depth Finding]].
 
-## [2026-04-21] note | First ingest pass complete
+## [2026-04-21] ingest | SUGRL (paper PDF)
+
+Deepened [[SUGRL]] entity page with exact multiplet loss (ω1·L_S + ω2·L_N + L_U), shared MLP/GCN weights confirmation, and the **SUGRL-batch 69.3** number from Table 2 (overlooked in onboarding — flagged in page). No thesis-level changes.
+
+## [2026-04-21] ingest | Less is More (paper PDF)
+
+Major update. Paper is v3 (2026-03-20) with full author list (Zhao, Ji, Dai, Ma, Tay @ NTU). Mechanism is 2-view: 1 MLP + 1 k-layer GCN, global β, direct cosine loss. **They evaluate at 169k-node scale (Arxiv-year)** — softens our onboarding's "not at OGB scale" framing. Differentiation still solid: K vs 2 views, per-node α vs global β, bootstrap vs direct cosine. Created [[AD-SSL vs Less is More]] synthesis page; updated [[Reviewer Attacks and Defenses]] with honest framing and new evidence gaps (reproduce at standard ogbn-arxiv, 2-view ablation of AD-SSL).
+
+## [2026-04-21] ingest | ATP (paper PDF)
+
+Deepened [[ATP]] entity page. Mechanism is 2-part: High-Deg edge masking (HPC) + weight-free scalar r̃ per node via degree+eigenvector+clustering in the kernel `D̂^(r̃−1) Â D̂^(−r̃)`. **Supervised, single kernel, scalar-per-node.** Our K-view per-node-per-depth α mixture in SSL regime is distinct. Added dedicated reviewer-defense row for "this is just ATP in SSL." ATP's HPC flagged as possible preprocessing adoption (open question).
+
+## [2026-04-21] note | Tier 1 ingest pass (3/7 complete)
 
 Wiki now has ~30 pages covering the thesis, competitive landscape,
 preliminary results, and reviewer-defense map. Ready for Coding Agent to

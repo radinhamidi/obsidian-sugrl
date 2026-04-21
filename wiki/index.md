@@ -14,6 +14,7 @@ Catalog of every page in this wiki. Read first when answering a query; drill int
 - [[Competitive Landscape 2026]] — efficiency champions, accuracy leaders, concurrent work, supervised adaptive-depth priors.
 - [[Pareto Gap]] — framing of the empty accuracy-×-cost region AD-SSL targets.
 - [[Reviewer Attacks and Defenses]] — anticipated reviewer objections and required evidence.
+- [[AD-SSL vs Less is More]] — dedicated differentiation page against closest concurrent work.
 - [[Project Phases and Decision Gates]] — phase map, Gate 1/2/3, agent communication rules.
 
 ## Experiments

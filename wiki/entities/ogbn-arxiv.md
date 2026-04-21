@@ -27,9 +27,12 @@ The **headline dataset** for AD-SSL — the decision-gate dataset in [[Project P
 
 ## SUGRL reproductions
 
-- Published SUGRL ([[SUGRL]]): 68.8 ± 0.4
-- Our repro (k=1): 68.77 ± 0.13
+- Published SUGRL full-batch k=1 ([[SUGRL]]): 68.8 ± 0.4
+- Published SUGRL-**batch** k=1 (same paper): **69.3 ± 0.2**
+- Our repro (full-batch, k=1): 68.77 ± 0.13
 - SUGRL-k=3 (prepropx2): 69.57 ± 0.05 — see [[Prepropx Depth Finding]]
+
+Note: the SUGRL paper itself reports two numbers (full-batch 68.8, mini-batch 69.3). Cite whichever is fair for the comparison context; do not cherry-pick 68.8 to inflate AD-SSL's delta.
 
 ## Competitive numbers (accuracy, 2026-04-21)
 

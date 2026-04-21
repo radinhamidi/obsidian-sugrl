@@ -62,6 +62,6 @@ Gates captured in [[Project Phases and Decision Gates]].
 
 ## Known risks
 
-- **[[Less is More]]** (arxiv 2509.25742, ICLR 2026 submission) — closest concurrent work. Similar backbone (GCN + MLP as complementary views, no augmentation, no negatives) but different focus (heterophily + robustness, small-scale). Our differentiation: large-scale efficiency + multi-depth adaptive views. Status to monitor.
+- **[[Less is More]]** (arxiv 2509.25742 v3, ICLR 2026 submission) — closest concurrent work. GCN + MLP as 2 complementary views with global β weighting and direct cosine loss. Differences with AD-SSL: (1) 2 views vs our K; (2) global β vs our per-node α_{i,k}; (3) direct alignment vs our bootstrap. Scale: they hit Arxiv-year (169k nodes, different task) but not standard ogbn-arxiv/products. See [[AD-SSL vs Less is More]].
 - MLP-only encoder may be the ceiling, not depth diversity.
 - Reviewers may collapse us to "GPRGNN + BGRL" — our defense in [[Reviewer Attacks and Defenses]].
