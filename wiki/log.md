@@ -56,7 +56,13 @@ Deepened [[GGD]] entity page with exact numbers. **Critical finding**: GGD at hi
 
 ogbn-papers100M numbers captured: GGD 63.5 test in 9h15m vs BGRL 62.1 in 26h28m — GGD is the right cost anchor at OGB-LSC scale.
 
-## [2026-04-21] note | Tier 1 ingest pass (4/7 complete)
+## [2026-04-21] ingest | BGRL (paper PDF)
+
+Deepened [[BGRL]] entity page with exact loss (`-cos(Z̃_1, H̃_2)`, symmetrized), complete ogbn-arxiv hyperparameters (3-layer GCN hidden 256, predictor MLP, **pf=0.0 pe=0.6** — edge-only aug, LayerNorm + weight standardisation, AdamW 1e-2, τ cosine 0.99→1.0, 10k steps). **No projector** — only a predictor, contra BYOL. 4 encoder forwards per step. Test: 71.64 ± 0.12 (val 72.53), essentially matching supervised GCN.
+
+Actionable for AD-SSL: (1) our bootstrap loss should exactly mirror BGRL's form applied across depth pairs; (2) drop the projector, keep only predictor; (3) adopt their three-plot collapse-monitoring protocol (loss / embedding spread / norm); (4) use LayerNorm not BatchNorm on ogbn-arxiv; (5) cosine τ schedule. Also flagged: BGRL frozen-eval underperforms LabelProp on MAG240M — a cautionary note for our scale-study framing.
+
+## [2026-04-21] note | Tier 1 ingest pass (5/7 complete)
 
 Wiki now has ~30 pages covering the thesis, competitive landscape,
 preliminary results, and reviewer-defense map. Ready for Coding Agent to
