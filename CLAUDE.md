@@ -100,8 +100,27 @@ When you initiate an inquiry to the Coding Agent, fill only the `# INQUIRY` sect
 ## Paper context
 
 - **Venue**: NeurIPS 2026.
-- **Project codename**: SUGRL.
-- The thesis, research questions, and current best results live under `wiki/synthesis/`. Keep a single canonical `wiki/synthesis/Thesis.md` that reflects the current best understanding of the contribution — update it as results land.
+- **Vault codename**: SUGRL (legacy; refers to the AAAI 2022 starting-point method).
+- **Paper codename**: **AD-SSL** (Adaptive-Depth Decoupled Self-Supervised Learning). This is the actual contribution under development.
+- Canonical landing pages (read these first when picking up a thread):
+  - `wiki/synthesis/Thesis.md` — one-sentence claim, mechanism, novelty, scope, insights A1–A4.
+  - `wiki/synthesis/Pareto Gap.md` — accuracy × wall-clock framing.
+  - `wiki/synthesis/Competitive Landscape 2026.md` — baselines and concurrent work.
+  - `wiki/synthesis/Reviewer Attacks and Defenses.md` — anticipated objections + required evidence.
+  - `wiki/synthesis/Novelty Verification Checklist.md` — per-claim 🔴/🟡/🟢 ablations; holds queued CA inquiries.
+  - `wiki/synthesis/Project Phases and Decision Gates.md` — phase map + gates.
+- **Scope is locked (2026-04-21)**: homophilic graphs only, per-dataset training. Heterophily and cross-graph transfer are explicitly out of scope for v1. See `wiki/synthesis/Thesis.md` § Scope.
+
+## Audit discipline (numerical claims)
+
+Before writing a number (accuracy, stderr, complexity, runtime) onto an entity or synthesis page, **verify it against the source PDF**. Prior-session memory and summary tables are not authoritative. Use `pdftotext -layout <file.pdf>` and grep for the specific claim.
+
+Past incidents this discipline guards against:
+- PolyGCL ogbn-arxiv accuracy fabricated from memory; the paper does not report it.
+- APPNP MS Academic / GCN stderrs written as ±0.17 / ±0.15 when the PDF says ±0.08 / ±0.09.
+- BGRL ogbn-arxiv stderr cited as ±0.24 (GraphACL's re-report) instead of the canonical ±0.12.
+
+If a claim cannot be sourced to a PDF you have read, mark it `(unverified)` or omit it.
 
 ## Working rhythm
 

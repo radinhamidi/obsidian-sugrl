@@ -53,7 +53,9 @@ Still, this is the cost we want to beat with AD-SSL: each AD-SSL step has **zero
 | **BGRL** | **72.53 ± 0.09** | **71.64 ± 0.12** |
 | Supervised GCN | 73.00 ± 0.17 | 71.74 ± 0.29 |
 
-BGRL essentially **matches supervised GCN** on ogbn-arxiv — a striking number. Note: BGRL full-batch OOMs on 16GB V100 on ogbn-arxiv (GGD paper footnotes this); this result uses node-neighbourhood sampling.
+BGRL essentially **matches supervised GCN** on ogbn-arxiv — a striking number.
+
+**Training regime (corrected 2026-04-21)**: the BGRL paper itself (§4.2) runs BGRL **full-graph** on ogbn-arxiv with a 3-layer GCN on a 16GB V100; only GRACE full-graph OOMs in Table 5 — BGRL has no such footnote in its own paper. The [[GGD]] paper's own efficiency comparison (§5.2, Fig. 4 footnote) uses a *batched* BGRL implementation with neighbour sampling in *their* reproduction — that is a GGD-paper reproduction detail, not a BGRL-paper limitation. Earlier drafts of this page conflated the two — fixed.
 
 ## ogbn-arxiv hyperparameters (Table 8)
 

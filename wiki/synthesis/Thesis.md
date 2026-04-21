@@ -33,7 +33,7 @@ No augmentation, no negatives, no GNN forward pass during training. Per-epoch co
 - Per-node adaptive depth weighting via group-relative ranking — not done in graph SSL.
 - Supervised adaptive-depth work exists ([[GPRGNN]], [[APPNP]], [[ATP]]) but not in the unsupervised regime.
 
-See [[Novelty Verification Checklist]] (to be written before submission).
+See [[Novelty Verification Checklist]].
 
 ## Why we believe this will work
 
@@ -41,16 +41,16 @@ From [[Preliminary Validation - 168 Runs]]: six SUGRL-style sampling tweaks fail
 
 ## Four insights being ablated
 
-Internal naming (does **not** go in paper):
-
-| Insight | Internal name | What it does |
-|---|---|---|
-| A1 | GRPO-style | Per-node view weighting from cross-depth consistency |
-| A2 | KTO-style | Binary quality signal (kNN match graph neighbors?), asymmetric loss |
-| A3 | SimPO-style | Test simpler losses (MSE, InfoNCE) |
-| A4 | Online-DPO-style | EMA-smoothed iterative refinement of depth preferences |
+Internal naming (does **not** go in paper). The "GRPO / KTO / SimPO / Online-DPO" tags are **RL-alignment analogies used during brainstorming** to import structural patterns (group-relative ranking, binary preference, simplified objective, iterative EMA preference) into graph SSL. The graph mechanism stands on its own — the analogy is scaffolding only.
 
 Baseline **B0** = uniform depth weights, bootstrap cosine loss, no refinement. See [[Ablation Plan - AD-SSL B0 A1-A4]].
+
+| Insight | Brainstorm tag (RL analogy) | What it does in AD-SSL | Maps to [[Novelty Verification Checklist]] |
+|---|---|---|---|
+| A1 | GRPO-style | Per-node α_{i,k} weighting from cross-depth consistency (analogous to group-relative advantage across a set of candidates) | Claim 1: per-node adaptive depth. 🔴 global-γ SSL ablation, 🔴 best-fixed-k sweep. |
+| A2 | KTO-style | Binary quality signal (does the node's kNN in embedding space match its graph neighbors?), asymmetric loss on good-vs-bad pairs | Claim 2 variant: alternative to bootstrap. Paired with 🔴 bootstrap-vs-DGI-BCE swap as a "what loss is the right self-sup signal" study. |
+| A3 | SimPO-style | Swap bootstrap for simpler losses (MSE, InfoNCE) to isolate whether EMA target + predictor is actually load-bearing | Claim 2: bootstrap justification. 🔴 bootstrap-vs-DGI-BCE swap covers the InfoNCE side; MSE variant is an extra column. |
+| A4 | Online-DPO-style | EMA-smoothed iterative refinement of α_{i,k} across epochs (preference-style update rather than direct gradient) | Claim 1 extension: stability of per-node α. Currently 🟡 — gated on A1 passing. |
 
 ## Outcome scenarios
 
@@ -59,6 +59,13 @@ Baseline **B0** = uniform depth weights, bootstrap cosine loss, no refinement. S
 - **Pessimistic:** B0 ≈ SUGRL-k=3 (~69.5), no insight helps. MLP encoder is the bottleneck → pivot.
 
 Gates captured in [[Project Phases and Decision Gates]].
+
+## Scope (locked 2026-04-21)
+
+- **Graph regime: homophilic graphs only.** Evaluation on ogbn-arxiv, ogbn-products, Cora/Citeseer/PubMed. Heterophilic benchmarks (Chameleon, Squirrel, Texas, Actor, Wisconsin) are **out of scope for v1** — clearly marked as future work. This matches the scope of every baseline on our Pareto frontier: [[GGD]], [[SUGRL]], [[BGRL]], [[GraphMAE2]] all restrict to homophilic graphs. Methods that do claim heterophily ([[PolyGCL]], [[GraphACL]]) engineer for it explicitly (spectral high-pass channel / asymmetric predictor) — AD-SSL's monotone-low-pass depth views do not, and retrofitting a high-pass view is an architectural change we defer.
+- **Training regime: per-dataset training.** AD-SSL is pretrained and evaluated on the same graph, following the field default (every SSL baseline above does the same). Cross-graph pretrain-and-transfer is a **separate open problem** benchmarked by [[GSTBench]] (CIKM 2025), which finds contrastive methods fail at it and only masked-reconstruction ([[GraphMAE2]]) transfers. We cite GSTBench and position AD-SSL outside that regime. No "foundation model" framing.
+
+These two decisions determine the shape of the main table and the introduction; they also remove Claim 5 (heterophily) and the "transfer probe" defensive gap from [[Novelty Verification Checklist]].
 
 ## Known risks
 

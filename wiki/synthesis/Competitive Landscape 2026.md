@@ -22,17 +22,23 @@ GGD is ~30× faster than SUGRL and scales to ogbn-papers100M.
 
 ## Accuracy leaders (ogbn-arxiv)
 
+All numbers verified against source PDFs (2026-04-21 audit).
+
 | Method | Venue | Accuracy | Key idea |
 |---|---|---|---|
-| [[BGRL]] | ICLR 2022 | ~71.6 | BYOL-style bootstrap, no negatives |
-| [[GraphMAE]] | KDD 2022 | ~71.7 | Masked feature reconstruction |
-| [[GraphMAE2]] | WWW 2023 | ~72.7 | Improved masked reconstruction |
-| [[GraphACL]] | NeurIPS 2023 | ~70 | Asymmetric contrastive, augmentation-free, heterophily |
-| [[PolyGCL]] | ICLR 2024 | ~70.5 | Learnable polynomial spectral filters as views |
+| [[BGRL]] | ICLR 2022 | 71.64 ± 0.12 | BYOL-style bootstrap, no negatives |
+| [[GraphMAE]] | KDD 2022 | 71.87 ± 0.21 (GCN) / 71.75 ± 0.17 (GAT) | Masked feature reconstruction |
+| [[GraphMAE2]] | WWW 2023 | 71.95 ± 0.08 | Improved masked reconstruction (Table 9, full-graph) |
+| [[GraphACL]] | NeurIPS 2023 | 71.72 ± 0.26 | Asymmetric contrastive, augmentation-free, heterophily-aware |
+| [[PolyGCL]] | ICLR 2024 | not reported on ogbn-arxiv | Learnable polynomial spectral filters; reports arXiv-year 43.07 (heterophilic label variant) |
+| [[BLNN]] | arXiv 2024-08 | not reported on ogbn-arxiv | BGRL + neighbor-positive alignment; 5 small graphs only |
 
 ## Concurrent work to monitor
 
 - **[[Less is More]]** (arxiv 2509.25742, ICLR 2026 submission). GCN + MLP as complementary views, no augmentation, no negatives. Focus: heterophily + robustness at small scale. **Does not run at OGB scale.** Closest architectural cousin to AD-SSL; our differentiation is large-scale efficiency + multi-depth adaptive views (vs their single GCN + single MLP).
+- **[[BLNN]]** (arXiv 2408.05087, Aug 2024, Liu et al.). BGRL + 1-hop neighbor-positive alignment with attention supportiveness. Small-graph evaluation only (WikiCS, Photo, Computer, CS, Physics). Orthogonal axis to AD-SSL — BLNN enriches positives in the *spatial* direction (1-hop neighbors), AD-SSL enriches in the *depth* direction (multi-hop precomputed views). Cite in related work; not a preempt.
+- **[[GRAPHITE]]** (ICLR 2026, arXiv 2602.07256). Supervised heterophily preprocessor via feature nodes. **Out of AD-SSL scope** per [[Thesis]] § Scope; noted for citation completeness only.
+- **[[GSTBench]]** (CIKM 2025, arXiv 2509.06975). Cross-dataset transferability benchmark — finds only [[GraphMAE2]]-style reconstruction transfers at papers100M scale; contrastive/bootstrap methods fail. We operate outside this regime (per-dataset training).
 
 ## Supervised adaptive-depth work (conceptual priors)
 

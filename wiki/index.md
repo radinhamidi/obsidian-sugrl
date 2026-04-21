@@ -15,6 +15,7 @@ Catalog of every page in this wiki. Read first when answering a query; drill int
 - [[Pareto Gap]] — framing of the empty accuracy-×-cost region AD-SSL targets.
 - [[Reviewer Attacks and Defenses]] — anticipated reviewer objections and required evidence.
 - [[AD-SSL vs Less is More]] — dedicated differentiation page against closest concurrent work.
+- [[Novelty Verification Checklist]] — per-claim ablations required to defend AD-SSL vs prior art; tagged 🔴/🟡/🟢.
 - [[Project Phases and Decision Gates]] — phase map, Gate 1/2/3, agent communication rules.
 
 ## Experiments
@@ -41,6 +42,8 @@ Catalog of every page in this wiki. Read first when answering a query; drill int
 - [[APPNP]] — teleport-based propagation, supervised (ICLR 2019).
 - [[ATP]] — per-node adaptive propagation, supervised (2024).
 - [[SGC]] — origin of the decoupled precompute trick (ICML 2019).
+- [[BLNN]] — BGRL + neighbor-positive alignment with attention supportiveness (arXiv 2024); small-graph evaluation only.
+- [[GRAPHITE]] — graph preprocessor for heterophily via feature nodes (ICLR 2026); out of AD-SSL scope but flagged for completeness.
 
 ## Entities — datasets
 
@@ -59,3 +62,5 @@ Catalog of every page in this wiki. Read first when answering a query; drill int
 
 - [[RESEARCH_AGENT_ONBOARDING]] — project brief (2026-04-21).
 - [[VALIDATION_ORIGINAL_CODE]] — 168-run preliminary validation report (2026-04-10).
+- [[GSTBench]] — CIKM 2025 cross-dataset transferability benchmark; only GraphMAE transfers at papers100M scale.
+- [[Graph Learning Poor Benchmarks]] — ICLR 2025 position paper advocating Pareto framings, CIs, non-graph baselines.

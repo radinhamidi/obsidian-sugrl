@@ -36,11 +36,14 @@ Theorem 1: optimising L is equivalent to maximising `JS(P_pos ‖ P_neg)` — st
 
 ## Inference-time global embedding (important for AD-SSL)
 
-GGD does **not** just use the encoder output. At inference they compute:
+GGD does **not** just use the encoder output. At inference (Eq. 4) they compute a "global" embedding and add it back:
 ```
-H_final = H_θ + A^n · H_θ       # n = 5 for all datasets
+H_global = A^n · H_θ
+H_final  = H_θ + H_global
 ```
-i.e. they re-propagate the frozen encoder output through the graph power. This is conceptually adjacent to [[Multi-Depth Views]] — they inject one extra "depth-n" view at inference (additively, fixed n, unweighted). AD-SSL generalises: K learnable depths during training with per-node weighting.
+i.e. they re-propagate the frozen encoder output through the n-th power of the adjacency matrix. This is conceptually adjacent to [[Multi-Depth Views]] — they inject one extra "depth-n" view at inference (additively, fixed n, unweighted).
+
+**On the value of n**: the paper does not pin down `n` in the main-experiments section I verified. Appendix A.6 uses **n = 10** for the graph-power timing benchmark (Tbl 13). The main-experiment n is not explicitly stated in the sections reviewed — so we should treat n as a paper-level hyperparameter, not a fixed constant. (Earlier drafts of this page asserted n=5; that was an error — removed.)
 
 Ablation (Tbl 17): removing the `A^n` power costs 0.9–1.2 points on Cora/PubMed — non-trivial. Using only `H_θ` still beats 6 baselines on 4/5 datasets.
 
@@ -52,7 +55,7 @@ Ablation (Tbl 17): removing the `A^n` power costs 0.9–1.2 points on Cora/PubMe
 | GGD | 1500 | 1 | **71.6 ± 0.5** | 6.26s | 0.95s | 0.95s |
 
 Memory: 4,513 MB @ h=256 (69.8% less than GBT).
-Hyperparameters (Tbl 15): lr=5e-5, hidden=1500, 3 GCN conv layers, 1 MLP projector layer, graph-power n=5.
+Hyperparameters (Tbl 15, Appendix): lr=5e-5, hidden=1500, 3 GCN conv layers, 1 MLP projector layer. The inference-time graph-power `n` is not listed in the ogbn-arxiv row of this table — treat as a per-dataset hyperparameter not pinned by the paper's main text.
 
 ## Numbers on ogbn-products (Tbl 9)
 

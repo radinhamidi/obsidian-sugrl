@@ -45,7 +45,7 @@ Accurate methods pay for accuracy with augmentations / generative decoders / mul
 
 - [[BGRL]] — two GNN encoders (online + target) + augmentations.
 - [[GraphMAE]] / [[GraphMAE2]] — full GNN encoder + mask-reconstruction decoder.
-- [[PolyGCL]] — polynomial spectral filters, learned per view.
+- [[PolyGCL]] — two spectral views (low-pass + high-pass Chebyshev), DGI-BCE on both, linear mix at downstream. Augmentation-free but uses a spectral GNN encoder per view. Wins 12/14 small real-world benchmarks; does **not** report ogbn-arxiv (only arXiv-year 43.07 under heterophilic labels).
 
 Fast methods pay for speed with weaker inductive signal:
 
@@ -72,3 +72,10 @@ Fast methods pay for speed with weaker inductive signal:
 - **Fair comparison** — reproduce baselines in our environment, report their wall-clock on our hardware.
 
 See [[Reviewer Attacks and Defenses]] for anticipated pushback.
+
+## Scope (locked 2026-04-21)
+
+- **Homophilic graphs only** — ogbn-arxiv, ogbn-products, Cora/Citeseer/PubMed. Same scope as every SSL baseline on this frontier ([[GGD]], [[SUGRL]], [[BGRL]], [[GraphMAE2]]). Heterophily is future work.
+- **Per-dataset training** — field default. Cross-graph transfer is a separate open problem ([[GSTBench]] CIKM 2025: only [[GraphMAE2]]-style reconstruction transfers at papers100M scale; contrastive/bootstrap methods fail). We cite GSTBench and operate outside the transfer regime; **no foundation-model framing**.
+
+See [[Thesis]] § Scope for the canonical statement.

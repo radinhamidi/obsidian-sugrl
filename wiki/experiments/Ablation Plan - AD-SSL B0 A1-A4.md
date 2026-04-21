@@ -25,6 +25,8 @@ Phase 2 experiment, currently **not started** (awaiting Phase 0 hygiene + Phase 
 
 Internal names are internal. See [[Thesis]] §"Four insights". Do not surface in paper.
 
+**On the GRPO / KTO / SimPO / Online-DPO tags.** These are **RL-alignment analogies from the brainstorming session** — scaffolding used to import structural patterns (group-relative ranking, binary preference, simplified objective, iterative EMA preference) into the graph-SSL setting. The graph mechanism in each row stands on its own; the analogy does not go in the paper, and Coding Agent should treat the "Weighting / Loss / Refinement" columns as the authoritative spec.
+
 ## Datasets
 
 Phase 2 core: [[ogbn-arxiv]] (the decision-gate dataset).
