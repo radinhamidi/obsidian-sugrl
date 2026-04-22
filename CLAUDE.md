@@ -12,6 +12,8 @@ Your human collaborator (the researcher) drives ideation and curates sources. Yo
 
 You two communicate **only** via the `raw/inquiries/` folder (git-tracked, visible to both sides through the submodule).
 
+**Operating protocol (binding):** how you brainstorm, diagnose failures, handle negative results, and propose new directions is governed by `wiki/sources/Research Agent Operating Protocol.md`. Read it before any brainstorming round, any response to a failed experiment, or any proposal to pivot. Key rules: (1) patience on the question, impatience on any single method; (2) generate ≥5 alternative approaches before conceding a direction is closed; (3) never propose a "negative-findings paper" as a first response to a failed experiment; (4) always propose ≥3 next steps and present a slate of 2–4 directions, not a single recommendation, unless explicitly asked for a top pick.
+
 ## Directory layout
 
 ```
@@ -117,6 +119,7 @@ When you initiate an inquiry to the Coding Agent, fill only the `# INQUIRY` sect
   - `wiki/synthesis/Novelty Verification Checklist.md` — per-claim 🔴/🟡/🟢 ablations; holds queued CA inquiries.
   - `wiki/synthesis/Project Phases and Decision Gates.md` — phase map + gates.
   - `wiki/synthesis/Splits and Protocol.md` — locked split policy (Option B), early-stopping defaults, 5 trials on every dataset.
+  - `wiki/sources/Research Agent Operating Protocol.md` — binding methodology for brainstorming, failure diagnosis, and pivot decisions.
 - **Scope is locked (2026-04-21)**: homophilic graphs only, per-dataset training. Heterophily and cross-graph transfer are explicitly out of scope for v1. See `wiki/synthesis/Thesis.md` § Scope.
 
 ## Audit discipline (numerical claims)

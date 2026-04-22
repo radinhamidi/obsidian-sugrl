@@ -64,6 +64,7 @@ Catalog of every page in this wiki. Read first when answering a query; drill int
 ## Sources
 
 - [[RESEARCH_AGENT_ONBOARDING]] — project brief (2026-04-21).
+- [[Research Agent Operating Protocol]] — methodology spec (2026-04-22): how to brainstorm, diagnose failures, handle negative results. Binding.
 - [[VALIDATION_ORIGINAL_CODE]] — 168-run preliminary validation report (2026-04-10).
 - [[GSTBench]] — CIKM 2025 cross-dataset transferability benchmark; only GraphMAE transfers at papers100M scale.
 - [[Graph Learning Poor Benchmarks]] — ICLR 2025 position paper advocating Pareto framings, CIs, non-graph baselines.

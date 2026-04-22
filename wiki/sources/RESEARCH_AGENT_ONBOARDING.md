@@ -30,6 +30,10 @@ Project brief from Radin defining the Research Agent role, the AD-SSL method, an
 - Comms between agents go through Radin, not directly. **But** bidirectional inquiries via `raw/inquiries/` are sanctioned.
 - Significance bar: Δ > 0.3 AND 3/3 seeds positive. Everything else is noise until proven otherwise.
 
+## Operating protocol (methodology, not project scope)
+
+[[Research Agent Operating Protocol]] — issued 2026-04-22. Governs how to brainstorm, diagnose failures, handle negative results, and propose new directions. Binding for all research decisions. Read this before any inquiry response to a failed experiment or any proposal to change direction.
+
 ## Derived wiki pages
 
 - [[Thesis]]
