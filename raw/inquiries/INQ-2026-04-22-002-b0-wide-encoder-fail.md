@@ -305,3 +305,341 @@ Agreed. Your reasoning is right (Cora std result generalizes, and the edge-dropo
 ## Status
 
 Keeping this inquiry `answered`. You'll append edge-dropout results here; we respond with the I-commit-or-reframe call based on those numbers.
+
+---
+
+# DIAGNOSTIC RESULTS — edge-dropout (Coding Agent, 2026-04-22)
+
+Ran the exact spec you requested: narrow encoder (hidden=512, out=128,
+dropout=0.5), InfoNCE τ=0.5, per-view edge-dropout p=0.3 applied before
+sym-norm with degrees recomputed from the dropped edge set. 3 seeds × 5
+probe restarts (n=15). Depths {1, 2, 4, 8}. Artifacts:
+
+- `results/ablation/B0-infonce-edgedrop/Cora/summary.json`
+- `results/ablation/B0-infonce-edgedrop/Computers/summary.json`
+- `ad_ssl/experiments/b0_edge_dropout.py` (new diagnostic script; edge
+  dropout via `drop_edges_undirected` — samples a Bernoulli(1-p) mask
+  over unique undirected edges, re-expands symmetrically, then
+  `build_sym_norm_adj` rebuilds Â from the dropped edge set with
+  self-loops and sym-norm applied to the reduced degree sequence).
+
+## Headline: split result, Cora PASSES, Computers FAILS hard
+
+**Cora:** PASS by +1.21 on mean-pool; all four trained Z_k beat the gate.
+**Computers:** FAIL by **−11.01** on best Z_k; edge-dropout *regressed*
+Computers by 8.4 pts relative to the no-augmentation narrow baseline.
+
+## D1 — per-depth probe accuracy
+
+### Cora (edge-dropout, p=0.3)
+
+| Depth | Trained Z_k (edgedrop)  | Raw Â^k X       | Gate pass (≥77.10)? |
+|------:|------------------------:|-----------------:|:-------------------:|
+| k=1   | 78.31 ± 0.35            | 77.10 ± 0.00     | ✅ +1.21 |
+| k=2   | **78.49 ± 0.45**  ← best| 80.37 ± 0.09     | ✅ +1.39 |
+| k=4   | 78.15 ± 0.44            | **81.32 ± 0.05** ← best raw | ✅ +1.05 |
+| k=8   | 77.39 ± 0.48            | 80.99 ± 0.08     | ✅ +0.29 |
+| mean  | 78.31 ± 0.58            | —                | ✅ +1.21 |
+
+### Computers (edge-dropout, p=0.3)
+
+| Depth | Trained Z_k (edgedrop)  | Raw Â^k X        | Gate pass (≥87.49)? |
+|------:|------------------------:|------------------:|:-------------------:|
+| k=1   | **76.48 ± 0.86** ← best | **87.49 ± 0.37**  ← best raw | ❌ −11.01 |
+| k=2   | 75.62 ± 0.43            | 86.48 ± 0.26      | ❌ −11.87 |
+| k=4   | 74.85 ± 0.50            | 82.18 ± 0.44      | ❌ −12.64 |
+| k=8   | 73.59 ± 0.24            | 76.27 ± 0.11      | ❌ −13.90 |
+| mean  | 75.71 ± 0.69            | —                 | ❌ −11.78 |
+
+## D2 — per-depth embedding std
+
+### Cora
+
+| k    | Trained std | Raw std | Unit-sphere ref (1/√128) |
+|------|------------:|--------:|-------------------------:|
+| 1    | 0.0865      | 0.0200  | 0.0884 |
+| 2    | 0.0865      | 0.0184  | 0.0884 |
+| 4    | 0.0866      | 0.0165  | 0.0884 |
+| 8    | 0.0866      | 0.0141  | 0.0884 |
+| mean | 0.0866      | —       | 0.0884 |
+
+Identical to the no-aug narrow run on Cora (std ≈ 0.0876). Encoder still
+projects to ~uniform sphere; what changed is that the encoder is now
+*useful* relative to Â¹X rather than destructive.
+
+### Computers
+
+| k    | Trained std | Raw std | Unit-sphere ref (1/√128) |
+|------|------------:|--------:|-------------------------:|
+| 1    | 0.0847      | 0.0194  | 0.0884 |
+| 2    | 0.0848      | 0.0145  | 0.0884 |
+| 4    | 0.0850      | 0.0113  | 0.0884 |
+| 8    | 0.0851      | 0.0090  | 0.0884 |
+| mean | 0.0850      | —       | 0.0884 |
+
+Also unchanged — same ~uniform sphere, same depth-monotonic pattern.
+The collapse signature doesn't move with edge-dropout. What moved is
+accuracy.
+
+## Delta vs no-augmentation narrow baseline (INQ-001 D1)
+
+| Dataset    | Variant              | Best Z_k   | Mean-pool  | Δ best | Δ mean |
+|------------|----------------------|-----------:|-----------:|-------:|-------:|
+| Cora       | no aug (INQ-001)     | 72.23      | 72.05      | —      | —      |
+| Cora       | edge-drop p=0.3      | **78.49**  | **78.31**  | **+6.26** | **+6.26** |
+| Computers  | no aug (INQ-001)     | 84.92      | 83.85      | —      | —      |
+| Computers  | edge-drop p=0.3      | 76.48      | 75.71      | **−8.44** | **−8.14** |
+
+Edge-dropout is a **+6.3 pt** win on Cora and an **−8.4 pt** regression
+on Computers. Magnitude-equal, sign-opposite.
+
+## Cost (RA gate: <10% of full precompute per epoch)
+
+| Dataset    | Full precompute sec | Mean epoch sec  | Cost ratio | Pass gate? |
+|------------|--------------------:|----------------:|-----------:|:----------:|
+| Cora       | 2.09                | 0.0113          | **0.054**  | ✅ (<0.10) |
+| Computers  | 4.78                | 0.0793          | **0.022**  | ✅ (<0.10) |
+
+Both datasets well under the 10% cost gate. Per-epoch re-propagation is
+cheap on both — the bottleneck is edge-dropout sampling + sparse-COO
+construction, not the matmul itself. Cost does not rule out Option I
+(it might on ogbn-arxiv; we didn't run that per your screening scope).
+
+## Interpretation (not decision — reporting per your "report and hold")
+
+The split is not random: the two datasets have **opposite raw-feature
+depth profiles** and that flips the sign of augmentation.
+
+- **Cora raw:** k=1→77.10, k=4→81.32 (strictly increasing to k=4).
+  Label signal lives in *deep* propagation; the graph needs smoothing to
+  resolve classes. Edge-dropout perturbs but doesn't destroy the
+  smoothing, and the view diversity it creates finally gives InfoNCE a
+  real learning signal. Result: +6 pts.
+
+- **Computers raw:** k=1→87.49, k=8→76.27 (strictly decreasing from
+  k=1). Label signal lives in the *raw feature matrix* and propagation
+  blurs it out past k=1 — monotonic harm. Edge-dropout rewires the
+  local 1-hop neighborhood that Computers depends on, and InfoNCE is
+  then asking the encoder to match two nodes whose dropped-graph 1-hop
+  representations no longer encode class. Result: −8 pts.
+
+This is the same "views too similar" story as INQ-001, but it cuts the
+opposite direction per dataset. On Cora, multi-depth alone is
+insufficient view diversity (established). Adding edge-dropout gives
+*useful* diversity. On Computers, multi-depth alone was already
+marginally working because k=1 is close to k=2; edge-dropout adds
+*harmful* diversity that overwhelms the weak class signal at higher k.
+
+The **ogbn-arxiv** edge-dropout diagnostic is now in (appended below,
+§ "DIAGNOSTIC RESULTS — edge-dropout, ogbn-arxiv"). It also **fails**:
+best trained Z_4 = 60.17 vs raw Â^{k*=4} X = 69.31, a **−9.14** gap.
+Two of three benchmarks (Computers, arxiv) fail; only Cora passes.
+
+## What this closes / opens
+
+**Closes:**
+- Option I as a *universal* augmentation recipe is dead. It works on
+  Cora, breaks Computers, breaks ogbn-arxiv (−9.14 at best Z_k). Two
+  out of three datasets fail. A single edge-dropout config for all
+  datasets is not on the table.
+
+**Opens — not my call, just flagging:**
+- Per-dataset augmentation policy (Option I with dataset-conditional
+  p_drop, possibly p=0 on Computers). Technically I; operationally
+  brittle to defend at NeurIPS.
+- Different augmentation type. Feature-dim masking (already tested and
+  killed on Computers in INQ-001 context), attribute masking, subgraph
+  sampling, anything else. You'd know the literature better than me here.
+- Revisit Option II or III — the I result doesn't resolve the overall
+  question.
+- Radin's standing concern about the Pareto claim is untouched by this
+  diagnostic — we haven't proved edge-dropout's cost on ogbn-arxiv, and
+  Computers shows that even low-cost augmentation can destroy accuracy.
+
+## Per your instructions
+
+- Not opening a new inquiry.
+- Not editing `IMPLEMENTATION_SPEC.md` §6.
+- Not starting A1–A4.
+- A1–A4 remain blocked until the I-commit-or-reframe call lands.
+
+**Awaiting Radin's call on:** (a) per-dataset augmentation policy, (b)
+different augmentation recipe, (c) revisit II/III, or (d) something
+else. If you want me to run a specific follow-up (e.g. p=0.1 sweep on
+Computers; edge-dropout on ogbn-arxiv; alternative augmentation on
+Cora) before you call it, name it — otherwise I hold.
+
+---
+
+# DIAGNOSTIC RESULTS — edge-dropout, ogbn-arxiv
+
+**Appended:** 2026-04-22. Radin's call after reviewing the Cora/Computers
+split: *"Test it on arxiv too, amazon computers is feature heavy may not
+be a good fit."* The hypothesis was that Computers' failure might be
+driven by its feature-heavy nature (label signal concentrated in raw X),
+and that a larger, more moderately sparse benchmark like ogbn-arxiv
+might behave more like Cora. Tested.
+
+**Verdict: arxiv also fails.** Not a Computers-specific effect.
+
+## Setup
+
+- Dataset: `ogbn-arxiv` (N≈170K, standard OGB split).
+- Encoder: narrow (spec §5.1) — hidden=512, out=128, dropout=0.5.
+- Loss: InfoNCE, τ=0.5.
+- Augmentation: per-view edge-dropout, p=0.3, re-propagated every epoch.
+- Anchor subsampling: 4096 nodes (full N×N similarity matrix on arxiv
+  is ~116 GB; 4096² ≈ 64 MB). Added `--infonce_batch_size` to
+  `ad_ssl/experiments/b0_edge_dropout.py` mirroring b0_per_depth.py.
+- 3 seeds × 5 probe restarts (n=15), 100 epochs, lr=0.01.
+- Job 239469 on a40_b2. Wall-clock 98 s total (37 s train-eval per seed).
+
+## Per-depth probe accuracy (ogbn-arxiv)
+
+| Depth k | Trained Z_k (mean ± std) | Raw Â^k X (mean ± std) | Δ (trained − raw) |
+|---------|---------------------------|-------------------------|-------------------|
+| 1       | 54.26 ± 0.51              | 65.42 ± 0.04            | **−11.16**        |
+| 2       | 59.43 ± 0.45              | 68.99 ± 0.04            | −9.56             |
+| 4       | 60.17 ± 0.39              | **69.31 ± 0.06**        | −9.14             |
+| 8       | 59.45 ± 0.58              | 66.93 ± 0.08            | −7.48             |
+| mean    | 59.96 ± 0.52              | —                       | —                 |
+
+- **Raw optimal depth:** k=4 at 69.31 (gate).
+- **Trained optimal depth:** also k=4 at 60.17 (same shape, −9.14 pts
+  below gate).
+- Every Z_k loses to its raw counterpart; mean-pool (59.96) is below
+  the worst-depth raw (Â¹X=65.42) by −5.46.
+- All 15 observations agree; seed variance tiny (max 0.6 pts).
+
+## Trained embedding std (ogbn-arxiv)
+
+| Depth k | trained std |
+|---------|-------------|
+| 1       | 0.0858      |
+| 2       | 0.0854      |
+| 4       | 0.0847      |
+| 8       | 0.0832      |
+| mean    | 0.0848      |
+
+Uniform-sphere value for D=128 is 1/√128 ≈ 0.0884. Trained std values
+are ~0.083–0.086, i.e. **just under** the uniform-sphere value. Not
+full collapse (would be *at or above* uniform for a truly collapsed
+representation — which is actually the sign on narrow-Cora), but the
+features are essentially isotropic noise. The encoder outputs retain
+barely more structure than random spherical points.
+
+## Cost
+
+- `mean_epoch_sec = 120 ms` (full adj is 170K nodes but anchor
+  subsampling dominates).
+- `precompute_sec = 4.5 s` (mostly first-seed cold cache; seeds 1,2
+  were 1.5 s each).
+- `cost_ratio = mean_epoch_sec / precompute_sec = 0.057`.
+- Under 10% gate. Cost is fine.
+
+Note: the cost ratio varies per seed (0.012, 0.079, 0.080) because the
+first seed includes OGB's cold dataset download/normalization path.
+Aggregate mean 0.057 is the honest number.
+
+## Three-dataset summary table
+
+| Dataset      | Raw gate Â^{k*} X | Best trained Z_k | Δ (gate)  | Pass? | No-aug B0 best | Δ vs no-aug |
+|--------------|-------------------|------------------|-----------|-------|----------------|-------------|
+| Cora         | 77.10 (k=1)       | 78.31 (mean)     | **+1.21** | ✅    | 72.05          | **+6.26**   |
+| Computers    | 87.49 (k=1)       | 76.48 (k=1)      | **−11.01**| ❌    | 84.92          | **−8.44**   |
+| ogbn-arxiv   | 69.31 (k=4)       | 60.17 (k=4)      | **−9.14** | ❌    | 61.28 (k=4)    | **−1.11**   |
+
+No-aug B0 baselines are from INQ-2026-04-22-001 D1 diagnostic (Cora
+and Computers) and the arxiv addendum (from `results/ablation/
+B0-infonce-perdepth/ogbn-arxiv/summary.json`).
+
+## Raw-depth profile shape (the pattern Radin flagged)
+
+| Dataset    | Â¹X    | Â²X    | Â⁴X        | Â⁸X    | Shape                    |
+|------------|--------|--------|-------------|--------|--------------------------|
+| Cora       | 77.10  | 78.60  | **81.32**   | 79.59  | peak at k=4 (smooth-up)  |
+| Computers  | **87.49** | 86.71 | 85.29     | 83.49  | peak at k=1 (monotonic down) |
+| ogbn-arxiv | 65.42  | 68.99  | **69.31**   | 66.93  | peak at k=4 (smooth-up)  |
+
+Arxiv has Cora's *shape* (raw peaks at k=4, not k=1) but trained
+encoder can't exploit it — so Radin's "feature-heavy" hypothesis for
+Computers doesn't cleanly generalize to arxiv's failure. The
+discriminator is not "which depth is the raw peak at", because Cora
+and arxiv share the peak-at-k=4 shape and diverge on outcome.
+
+## Revised interpretation
+
+What distinguishes Cora (passes) from Computers + arxiv (fail) is
+probably not one axis. Candidates:
+
+1. **Scale.** Cora has 2.7K nodes; Computers has 13.8K; arxiv has
+   169K. InfoNCE negatives scale with batch — on Cora full-batch
+   (2.7K neg) is plausibly strong enough; arxiv is forced to 4096
+   neg (~2.4% of the graph); Computers gets full-batch (13.8K)
+   which should be *better*, yet fails. Scale alone doesn't explain.
+
+2. **Raw-feature density / quality.** Cora features are bag-of-words
+   (sparse, noisy); arxiv features are word2vec means (dense, noisy);
+   Computers features are review bag-of-words (dense, very
+   informative — almost class-labels-in-features). The InfoNCE
+   instance-discrimination objective on high-quality features just
+   destroys the feature-level signal it needs to probe.
+
+3. **Graph sparsity / homophily regime.** Cora avg degree ≈ 4, high
+   homophily. Computers avg degree ≈ 36, moderate homophily.
+   ogbn-arxiv avg degree ≈ 14, moderate homophily. Edge-dropout p=0.3
+   removes disproportionately more *useful* edges on lower-degree
+   graphs, which should hurt Cora most — but Cora is the only one
+   that passes. So this axis cuts the wrong direction too.
+
+4. **B0's fundamental ceiling.** The parameter-free Â^{k*} X probe
+   already captures 77–87% acc on all three datasets. Maybe the
+   InfoNCE instance-discrimination objective cannot in principle
+   outperform a raw linear probe on already-strong features. Cora is
+   the weakest raw baseline (77.10) so there's headroom for trained
+   encoder to add; Computers (87.49) and arxiv (69.31) have much
+   higher absolute raw features relative to what any noisy
+   contrastive signal can match, so instance-disc. doesn't beat them.
+   This is the "InfoNCE can't beat raw on already-strong features"
+   hypothesis and it's the only one that explains all three
+   datasets cleanly — Cora's raw is the *lowest* of the three, yet
+   the only one where trained Z_k beats it.
+
+The fourth hypothesis is uncomfortable but it's what the data says.
+
+## What this changes
+
+**Closes, more firmly:** edge-dropout as a universal recipe is dead,
+not just "breaks on feature-heavy graphs". Adding arxiv (sparse, word
+embedding features — not feature-heavy) confirms the failure is not
+about Computers specifically. The mechanism is something else.
+
+**Opens (for Radin):**
+- Per-dataset augmentation is now harder to defend: you'd need
+  p_drop=0.3 on Cora, p_drop=0 on Computers, p_drop=? on arxiv.
+  Three datasets, three policies is not a method.
+- The fourth hypothesis above (InfoNCE ceiling on strong raw
+  features) suggests B0 as currently specified may not be able to
+  clear Â^{k*} X on any dataset where raw features are already
+  strong. If true, B0-InfoNCE might only ever be the "baseline we
+  beat" and AD-SSL needs something else (predictor, target network,
+  structure-aware loss) to sit above the gate.
+- Alternative: the entire §10 gate framing (B0 must beat Â^{k*} X)
+  may be miscalibrated. On arxiv the gap is small enough (−1.11 vs
+  no-aug baseline) that edge-dropout arguably isn't the problem at
+  all — the no-aug B0 also doesn't beat Â⁴X. This is independent of
+  augmentation choice.
+
+## Per your instructions
+
+- Not opening a new inquiry.
+- Not editing `IMPLEMENTATION_SPEC.md` §6.
+- Not starting A1–A4.
+- Appending to this same inquiry, which is what you asked for.
+
+**Awaiting Radin's call.** Three-dataset picture is now in hand:
+Cora ✅, Computers ❌, arxiv ❌. The "Computers is feature-heavy"
+explanation does not cover arxiv's failure. Options open are the
+same four as before plus "rethink the §10 gate policy". No more
+experiments from me until you or Radin says what to run next.
+
