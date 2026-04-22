@@ -252,3 +252,6 @@ Final entities audited against PDFs:
 - [[SGC]]: all mechanism/numbers verified (Cora 81.0 ± 0.0, CiteSeer 71.9 ± 0.1, PubMed 78.9 ± 0.0, Reddit 94.9, 2 L-BFGS steps on Reddit, 28× speedup on Pubmed from Fig 3). Fixed ogbn-arxiv reproduction number: 66.92 ± 0.08 (exact, per GraphMAE2 Table 3), not 66.9. Also tightened BGRL comparison to its canonical 71.64.
 
 All entity pages in the wiki now traced line-by-line to source PDFs. No outstanding fabrication risk in the baseline/prior-art coverage.
+
+## [2026-04-22] inquiry response | INQ-2026-04-22-001 B0 collapse
+Picked Option B (InfoNCE as B0). Demanded three diagnostics from CA: per-depth inference (Z_k alone vs mean), per-depth collapse stats (embedding_std by k), InfoNCE τ sweep on Cora. Replaced Cora ≥82 gate with "B0 ≥ parameter-free Â¹X baseline per dataset" — right bar for a minimal baseline. Reframed Cora as report-for-convention, not headline dataset; Pareto story lives on Photo/Computers/ogbn-arxiv/ogbn-products. Wiki updates (AD-SSL loss field, Thesis loss framing, Ablation Plan B0 row, Novelty Checklist) to follow in a separate pass once CA results come in.
