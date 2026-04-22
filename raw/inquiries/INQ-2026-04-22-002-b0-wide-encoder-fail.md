@@ -643,3 +643,49 @@ explanation does not cover arxiv's failure. Options open are the
 same four as before plus "rethink the §10 gate policy". No more
 experiments from me until you or Radin says what to run next.
 
+
+---
+
+# RESPONSE #2
+
+**From:** Research Agent
+**Status:** answered (second round)
+**Date:** 2026-04-22
+
+## Decision
+
+**Two parallel tracks.** You run one more cheap diagnostic; research side starts designing a structural alternative in case this one also fails. No spec changes yet. A1–A4 still blocked.
+
+## Your next diagnostic — BGRL-lite on InfoNCE + edge-dropout
+
+One config, two datasets. The goal: does adding BGRL's full collapse-prevention kit (predictor + EMA target) to the edge-dropout setup rescue Computers? If yes, Option I is alive with a full kit. If no, Option I is dead in all forms and we commit to the reframe.
+
+- **Encoder:** narrow per spec §5.1 (hidden=512, out=128, dropout=0.5). Same as edge-drop run.
+- **Loss:** bootstrap cosine (BGRL-style) — online predicts target, stop-grad on target side. This replaces InfoNCE for this test.
+- **EMA decay:** 0.99 (spec §6 original value).
+- **Predictor:** 2-layer MLP matching BGRL's official config. If unsure, `Linear(128,512) → BatchNorm → PReLU → Linear(512,128)`.
+- **Augmentation:** per-view edge-dropout, p=0.3 (as in the just-completed diagnostic). Applied before sym-norm; independent masks per view.
+- **Depths:** {1, 2, 4, 8}. Same pair-sampling scheme as before.
+- **Datasets:** Cora + Computers. (Skip arxiv — the pattern there is clear and we're not going to change the call based on arxiv alone in this round.)
+- **Seeds/probes:** 3 × 5. Same as prior screening.
+- **Report:** per-depth trained Z_k accuracy, mean-pool, per-depth std, edge-dropout cost/epoch. Same format as the edge-drop table you just produced.
+
+Append results to this inquiry under `# DIAGNOSTIC RESULTS — BGRL-lite + edge-drop`. Not a new inquiry.
+
+**Pass bar (unchanged):** B0 ≥ Â¹X on **both** Cora and Computers.
+
+**Cost gate (new):** if predictor+target+dropout pushes per-epoch cost above 25% of precompute on Computers, flag separately — high cost weakens Option I even if it passes accuracy.
+
+## Track 2 (research side, in parallel)
+
+While you run the diagnostic, research side begins designing a structural alternative: **AD-SSL as learned per-node α over raw Â^k X probes, no encoder.** Motivation is CA hypothesis #4 + the three-dataset pattern in which trained Z_k never beats best raw Â^{k*}X. If the BGRL-lite diagnostic also fails, we reframe around this; if it passes, the reframe becomes a parallel ablation rather than the headline.
+
+You don't need to do anything for track 2 yet — designed by research, you'll get a spec later.
+
+## Holding pattern (unchanged)
+
+- Do **not** edit `IMPLEMENTATION_SPEC.md` §6.
+- Do **not** start A1–A4.
+- Do **not** open new inquiries — append to this one.
+
+Status stays `answered`; will update to `closed` only once the B0 question is fully resolved.
