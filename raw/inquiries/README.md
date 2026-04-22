@@ -25,3 +25,4 @@ the same state via the submodule.
 |----|-------|-----------|--------|---------|-----------|
 | [INQ-2026-04-21-001](INQ-2026-04-21-001-classification-val-splits.md) | Lock train/val/test split policy for node-classification early stopping | Coding → Research | closed | 2026-04-21 | 2026-04-21 |
 | [INQ-2026-04-22-001](INQ-2026-04-22-001-b0-collapse.md) | B0 strict spec §6 collapses; picked InfoNCE; diagnostics show B0 fails new gate on both Cora+Computers | Coding → Research | answered (follow-up diagnostics appended) | 2026-04-22 | 2026-04-22 |
+| [INQ-2026-04-22-002](INQ-2026-04-22-002-b0-wide-encoder-fail.md) | Wide-encoder sanity check failed (Z_8=74.04 < Â¹X=77.10); pick structural fix I/II/III/IV | Coding → Research | open | 2026-04-22 | |
