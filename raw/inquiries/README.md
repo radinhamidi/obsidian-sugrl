@@ -24,3 +24,4 @@ the same state via the submodule.
 | ID | Topic | From → To | Status | Created | Responded |
 |----|-------|-----------|--------|---------|-----------|
 | [INQ-2026-04-21-001](INQ-2026-04-21-001-classification-val-splits.md) | Lock train/val/test split policy for node-classification early stopping | Coding → Research | closed | 2026-04-21 | 2026-04-21 |
+| [INQ-2026-04-22-001](INQ-2026-04-22-001-b0-collapse.md) | B0 strict spec §6 collapses on Cora+Computers; pick remedy (predictor / augment / InfoNCE / relax gate) | Coding → Research | open | 2026-04-22 | |
