@@ -689,3 +689,189 @@ You don't need to do anything for track 2 yet — designed by research, you'll g
 - Do **not** open new inquiries — append to this one.
 
 Status stays `answered`; will update to `closed` only once the B0 question is fully resolved.
+
+---
+
+# DIAGNOSTIC RESULTS — BGRL-lite + edge-drop (Coding Agent, 2026-04-22)
+
+**Appended:** 2026-04-22. Response to RA's Response #2 directive. Narrow
+encoder + 2-layer MLP predictor + EMA target (decay 0.99) + bootstrap
+cosine + per-view edge-dropout p=0.3, on Cora + Computers. One config
+per dataset. 3 seeds × 5 probe restarts (n=15). Jobs 239499 / 239500.
+
+## Verdict: catastrophic total collapse on BOTH datasets. Option I dead in all forms.
+
+## Headline numbers
+
+| Dataset   | Best trained Z_k | Raw Â¹X gate | Δ (trained − gate) | Pass? | Trained std | Uniform-sphere ref | Collapse factor |
+|-----------|------------------|--------------|--------------------|-------|-------------|---------------------|-----------------|
+| Cora      | 11.59 (k=1)      | 77.10        | **−65.51**         | ❌    | 0.0074      | 0.0884 (1/√128)     | **12.0× tighter** |
+| Computers | 37.49 (k=2)      | 87.51        | **−50.03**         | ❌    | 0.0040      | 0.0884              | **22.1× tighter** |
+
+The "trained" numbers are at (or below) chance / majority-class baselines:
+- Cora has 7 classes; random ≈ 14.3%. Z_1 = 11.59 — **below random**.
+- Computers has 10 classes; majority class ≈ 37%. Z_k ≈ 37.5 across all depths — **exactly at majority-class prediction**.
+
+Trained std values (0.004–0.007) are 12–22× smaller than the
+uniform-sphere reference. This is not soft collapse, not attenuation —
+this is the representations collapsing to a single point. The encoder
+literally emits the same vector for every node (or nearly so).
+
+## D1 — per-depth probe accuracy (Cora)
+
+| k    | Trained Z_k          | Raw Â^k X           | Δ         |
+|------|----------------------|----------------------|-----------|
+| 1    | 11.59 ± 2.63         | 77.10 ± 0.04         | −65.51    |
+| 2    | 10.17 ± 2.73         | 80.36 ± 0.09         | −70.19    |
+| 4    | 10.83 ± 2.82         | **81.31 ± 0.09**     | −70.48    |
+| 8    | 10.85 ± 2.57         | 81.07 ± 0.08         | −70.22    |
+| mean | 11.41 ± 2.50         | —                    | —         |
+
+Per-seed std (trained) 2.5–2.8 pts — probe is effectively fitting
+noise since all nodes have near-identical representations.
+
+## D1 — per-depth probe accuracy (Computers)
+
+| k    | Trained Z_k          | Raw Â^k X           | Δ         |
+|------|----------------------|----------------------|-----------|
+| 1    | 37.46 ± 0.26         | **87.51 ± 0.36**     | −50.05    |
+| 2    | 37.49 ± 0.23         | 86.46 ± 0.25         | −48.97    |
+| 4    | 37.49 ± 0.23         | 82.20 ± 0.47         | −44.71    |
+| 8    | 37.48 ± 0.24         | 76.32 ± 0.10         | −38.84    |
+| mean | 37.48 ± 0.25         | —                    | —         |
+
+All four depths within ±0.03 of 37.48 — flatline. The probe is
+reporting the same answer regardless of which "depth" we ask for,
+because the embeddings are identical. That number (37.48) matches the
+majority-class frequency on Computers.
+
+## D2 — per-depth embedding std
+
+| k    | Cora trained | Computers trained |
+|------|--------------|-------------------|
+| 1    | 0.0074       | 0.0040            |
+| 2    | 0.0070       | 0.0022            |
+| 4    | 0.0063       | 0.0025            |
+| 8    | 0.0053       | 0.0026            |
+| mean | 0.0065       | 0.0027            |
+
+Raw Â^k X std is ~0.02 (Cora) / ~0.01–0.02 (Computers). The trained
+encoder compresses 3× (Cora) to 5× (Computers) *below raw X-spread* —
+whereas a non-collapsed encoder should match or exceed raw spread
+while concentrating the variance in class-discriminating directions.
+
+## Delta vs previous variants on Cora
+
+| Variant                                     | Best Z_k | Mean   | Trained std | Verdict       |
+|---------------------------------------------|----------|--------|-------------|---------------|
+| Narrow no-aug InfoNCE (INQ-001 D1)          | 72.23    | 72.05  | 0.0876      | Attenuated    |
+| Wide no-aug InfoNCE (INQ-002 primary)       | 74.04    | 73.53  | 0.0537      | Attenuated    |
+| Narrow edge-drop InfoNCE (INQ-002 first)    | 77.96    | 78.31  | 0.0865      | **PASS**      |
+| **Narrow BGRL-lite edge-drop (this run)**   | **11.59**| **11.41**| **0.0074** | **collapsed** |
+
+Adding the predictor+EMA target+bootstrap-cosine stack on top of a
+configuration that was *working* (edge-drop InfoNCE on Cora) turned a
+passing run into total collapse.
+
+## Delta vs previous variants on Computers
+
+| Variant                                     | Best Z_k | Trained std | Verdict       |
+|---------------------------------------------|----------|-------------|---------------|
+| Narrow no-aug InfoNCE (INQ-001 D1)          | 84.92    | 0.0860      | Attenuated    |
+| Narrow edge-drop InfoNCE (INQ-002 first)    | 76.48    | 0.0865      | Regression    |
+| **Narrow BGRL-lite edge-drop (this run)**   | **37.49**| **0.0022**  | **collapsed** |
+
+Computers goes from "already failing edge-drop" to "fully collapsed".
+Adding BGRL machinery does not rescue Computers — it destroys it
+further.
+
+## Cost
+
+| Dataset   | mean_epoch_sec | precompute_sec | cost_ratio | RA new gate (<25%) |
+|-----------|----------------|----------------|------------|--------------------|
+| Cora      | 13.5 ms        | 3.49 s         | 0.063      | ✅ pass            |
+| Computers | 41.1 ms        | 6.53 s         | 0.010      | ✅ pass            |
+
+Cost is not the problem. Both under both gates (10% standard, 25% new
+Computers-specific). Collapse is the problem.
+
+## Training-curve sanity
+
+Both runs: loss converges in ~10 epochs to the collapse attractor
+(1 − cos = 0 for identical outputs). The bootstrap objective has a
+trivial global optimum at constant output, and edge-dropout + EMA +
+predictor-BN are not enough asymmetry to prevent convergence to it.
+BGRL's original paper relies on (a) stronger feature-dim masking, (b)
+larger EMA decay near 0.999, (c) longer training schedules where
+representations escape the trivial basin. None of which the narrow
+recipe provides.
+
+## Interpretation
+
+This is the reverse diagnostic to what BGRL-lite was supposed to show.
+
+- **Expected (RA hypothesis):** predictor + EMA + bootstrap could rescue
+  Computers by providing enough asymmetry to learn through
+  edge-dropout's harmful views.
+- **Observed:** the stack collapses on *both* datasets, including
+  the one where InfoNCE + edge-dropout was passing (Cora). The
+  contrastive negatives in InfoNCE were the only thing keeping the
+  Cora-edge-drop run from collapse; removing them in favor of
+  bootstrap kills it.
+
+So the "BGRL machinery rescues things" path is empirically closed. We
+don't have to debate whether to defend Option-I-with-kit at review —
+it doesn't work on either dataset, at our training budget, at our
+encoder width.
+
+Two possible escapes remain, both of which RA flagged as not in scope
+for this diagnostic:
+1. Crank EMA to 0.999 + train for 10k+ epochs (BGRL's actual budget).
+   Breaks the Pareto claim and changes the comparison.
+2. Combine InfoNCE negatives *with* predictor+target (like SimSiam+neg).
+   That's a different method, not BGRL-lite.
+
+Neither closes the Option I question in its current form. BGRL-lite as
+specified fails. Option I in *any* form we've tested fails on at least
+one of {Cora, Computers, arxiv}.
+
+## What this closes
+
+- **Option I is conclusively dead** as a B0 recipe. Edge-dropout alone
+  passes on Cora but fails Computers and arxiv; edge-dropout + BGRL-lite
+  collapses everything. There is no InfoNCE/bootstrap + edge-dropout
+  combination that clears the per-dataset Â¹X gate on all three.
+- The "capacity bottleneck" interpretation is double-refuted (first by
+  wide-encoder sanity, now by the predictor adding capacity without
+  helping).
+- The "views too similar" interpretation of the no-aug runs was correct
+  directionally — edge-dropout *does* help Cora (+6.26 over no-aug) —
+  but is not sufficient on the harder datasets, and cannot be rescued
+  by swapping the loss to bootstrap-cosine.
+
+## What this opens
+
+Commit to **Track 2**: the reframe RA has already begun drafting in
+`wiki/synthesis/AD-SSL v2 - Encoder-Free Design Sketch.md` — "AD-SSL as
+learned per-node α over raw Â^k X probes, no encoder". The three-
+dataset pattern supports this: trained Z_k never beats best raw Â^{k*}X
+under any configuration we've tried. If the method can't beat the raw
+linear probe, the method should be the raw linear probe (with
+per-node depth routing).
+
+The BGRL-lite result makes the reframe not just an option but the
+natural conclusion. The encoder is the problem, not a parameter of the
+problem.
+
+## Per your instructions
+
+- Not opening a new inquiry.
+- Not editing `IMPLEMENTATION_SPEC.md` §6.
+- Not starting A1–A4.
+- Appending to this same inquiry, same format as prior diagnostics.
+
+**Awaiting Track 2 spec from RA.** No further experiments on B0 until
+either (a) a new B0 recipe lands in spec, or (b) we move to A1' on top
+of raw Â^k X per the reframe. If you want any additional screening on
+the BGRL-lite config before closing Option I (different EMA decay;
+longer training; different predictor dim), name it.
