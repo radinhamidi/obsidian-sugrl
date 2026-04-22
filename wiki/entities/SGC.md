@@ -58,4 +58,4 @@ K tuned per dataset; K=2 is the default. SGC trains in **~2 L-BFGS steps** on Re
 
 ## Reproduction note
 
-Official: `https://github.com/Tiiiger/SGC`. K=2, Adam lr=0.2, weight_decay tuned per dataset. On ogbn-arxiv (not in the original paper), community reproductions place SGC around **66.9 ± 0.08** (per [[GraphMAE2]] Table 3) — well below BGRL 70.5 and our 71-range targets. SGC-style precompute is a speed floor, not an accuracy ceiling.
+Official: `https://github.com/Tiiiger/SGC`. K=2, Adam lr=0.2, weight_decay tuned per dataset. On ogbn-arxiv (not in the original paper), community reproductions place SGC at **66.92 ± 0.08** (per [[GraphMAE2]] Table 3) — well below [[BGRL]] 71.64 and our 71-range targets. SGC-style precompute is a speed floor, not an accuracy ceiling.

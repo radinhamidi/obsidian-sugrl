@@ -1,0 +1,1065 @@
+                                                                       Simplifying Graph Convolutional Networks
+
+
+                                                      Felix Wu * 1 Tianyi Zhang * 1 Amauri Holanda de Souza Jr. * 1 2 Christopher Fifty 1 Tao Yu 1
+                                                                                       Kilian Q. Weinberger 1
+
+
+                                                                   Abstract                                rithms has followed a clear trend from initial simplicity to
+                                                                                                           need-driven complexity. For instance, limitations of the
+                                                Graph Convolutional Networks (GCNs) and their
+                                                                                                           linear Perceptron (Rosenblatt, 1958) motivated the develop-
+
+
+
+
+arXiv:1902.07153v2 [cs.LG] 20 Jun 2019
+                                                variants have experienced significant attention and
+                                                                                                           ment of the more complex but also more expressive neural
+                                                have become the de facto methods for learning
+                                                                                                           network (or multi-layer Perceptrons, MLPs) (Rosenblatt,
+                                                graph representations. GCNs derive inspiration
+                                                                                                           1961). Similarly, simple pre-defined linear image filters (So-
+                                                primarily from recent deep learning approaches,
+                                                                                                           bel & Feldman, 1968; Harris & Stephens, 1988) eventually
+                                                and as a result, may inherit unnecessary complex-
+                                                                                                           gave rise to nonlinear CNNs with learned convolutional
+                                                ity and redundant computation. In this paper,
+                                                                                                           kernels (Waibel et al., 1989; LeCun et al., 1989). As ad-
+                                                we reduce this excess complexity through suc-
+                                                                                                           ditional algorithmic complexity tends to complicate theo-
+                                                cessively removing nonlinearities and collapsing
+                                                                                                           retical analysis and obfuscates understanding, it is typically
+                                                weight matrices between consecutive layers. We
+                                                                                                           only introduced for applications where simpler methods are
+                                                theoretically analyze the resulting linear model
+                                                                                                           insufficient. Arguably, most classifiers in real world appli-
+                                                and show that it corresponds to a fixed low-pass
+                                                                                                           cations are still linear (typically logistic regression), which
+                                                filter followed by a linear classifier. Notably, our
+                                                                                                           are straight-forward to optimize and easy to interpret.
+                                                experimental evaluation demonstrates that these
+                                                simplifications do not negatively impact accuracy          However, possibly because GCNs were proposed after the
+                                                in many downstream applications. Moreover, the             recent “renaissance” of neural networks, they tend to be a
+                                                resulting model scales to larger datasets, is natu-        rare exception to this trend. GCNs are built upon multi-layer
+                                                rally interpretable, and yields up to two orders of        neural networks, and were never an extension of a simpler
+                                                magnitude speedup over FastGCN.                            (insufficient) linear counterpart.
+                                                                                                           In this paper, we observe that GCNs inherit considerable
+                                                                                                           complexity from their deep learning lineage, which can
+                                         1. Introduction                                                   be burdensome and unnecessary for less demanding appli-
+                                         Graph Convolutional Networks (GCNs) (Kipf & Welling,              cations. Motivated by the glaring historic omission of a
+                                         2017) are an efficient variant of Convolutional Neural Net-       simpler predecessor, we aim to derive the simplest linear
+                                         works (CNNs) on graphs. GCNs stack layers of learned              model that “could have” preceded the GCN, had a more
+                                         first-order spectral filters followed by a nonlinear activation   “traditional” path been taken. We reduce the excess com-
+                                         function to learn graph representations. Recently, GCNs and       plexity of GCNs by repeatedly removing the nonlinearities
+                                         subsequent variants have achieved state-of-the-art results        between GCN layers and collapsing the resulting function
+                                         in various application areas, including but not limited to        into a single linear transformation. We empirically show
+                                         citation networks (Kipf & Welling, 2017), social networks         that the final linear model exhibits comparable or even su-
+                                         (Chen et al., 2018), applied chemistry (Liao et al., 2019),       perior performance to GCNs on a variety of tasks while be-
+                                         natural language processing (Yao et al., 2019; Han et al.,        ing computationally more efficient and fitting significantly
+                                         2012; Zhang et al., 2018c), and computer vision (Wang             fewer parameters. We refer to this simplified linear model
+                                         et al., 2018; Kampffmeyer et al., 2018).                          as Simple Graph Convolution (SGC).
+
+                                         Historically, the development of machine learning algo-           In contrast to its nonlinear counterparts, the SGC is intu-
+                                                                                                           itively interpretable and we provide a theoretical analysis
+                                            *
+                                             Equal contribution 1 Cornell University 2 Federal Insti-      from the graph convolution perspective. Notably, feature
+                                         tute of Ceara (Brazil).   Correspondence to: Felix Wu             extraction in SGC corresponds to a single fixed filter applied
+                                         <fw245@cornell.edu>, Tianyi Zhang <tz58@cornell.edu>.
+                                                                                                           to each feature dimension. Kipf & Welling (2017) empiri-
+                                         Proceedings of the 36 th International Conference on Machine      cally observe that the “renormalization trick”, i.e. adding
+                                         Learning, Long Beach, California, PMLR 97, 2019. Copyright        self-loops to the graph, improves accuracy, and we demon-
+                                         2019 by the author(s).
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            Simplifying Graph Convolutional Networks
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          GCN
+                                                                                                                                                                                                                                                                                                      Input Graph                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  Predictions
+
+                                                                                                                                                                                                                                                                                                       x6                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     ⇥(K                                                                                                     1)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            x5
+                                                                                                                                                                                                                                                                                                        <latexit sha1_base64="(null)">(null)</latexit>
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              <latexit sha1_base64="(null)">(null)</latexit>
+
+
+
+
+                                                 x7
+                                                 <latexit sha1_base64="(null)">(null)</latexit>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            <latexit sha1_base64="(null)">(null)</latexit>
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    x4
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    <latexit sha1_base64="(null)">(null)</latexit>
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          Feature Propagation                                                                                                                                                                                                                                                                       Nonlinearity
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           H̄(k)   SH(k 1)                                                                                                                                                                                                                         H(k)                                                  ReLU(H̄(k) )
+                                                                                                                                                   x1
+                                                                                                                                                   <latexit sha1_base64="(null)">(null)</latexit>
+                                                                                                                                                                                                                                                                                                                                                                                                          x2
+                                                                                                                                                                                                                                                                                                                                                                                                          <latexit sha1_base64="(null)">(null)</latexit>
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              x3
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           <latexit sha1_base64="(null)">(null)</latexit>
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   <latexit sha1_base64="(null)">(null)</latexit>
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      >
+H(0) = X = [x1 , . . . , xn ]                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               ŶGCN = softmax(SH(K 1) ⇥(K) )
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              <latexit sha1_base64="(null)">(null)</latexit>
+
+
+
+
+<latexit sha1_base64="(null)">(null)</latexit>
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           Linear Transformation                                                                                                                                                                                                                           <latexit sha1_base64="(null)">(null)</latexit>
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             H̄(k)   H̄(k) ⇥(k)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             <latexit sha1_base64="(null)">(null)</latexit>
+
+
+
+
+                                                                                                                                                                                                                                                                                                      Input Graph                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  Predictions
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               SGC
+                                                                                                                                                                                                                                                                                                                                                         x6
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             x5
+                                                                                                                                                                                                                                                                                                                                                         <latexit sha1_base64="(null)">(null)</latexit>
+
+
+
+
+                                                                                                  x7
+                                                                                                  <latexit sha1_base64="(null)">(null)</latexit>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             <latexit sha1_base64="(null)">(null)</latexit>
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     x4
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     <latexit sha1_base64="(null)">(null)</latexit>
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            K-step Feature Propagation
+                                                                                                                                                                                                                                                     x1
+                                                                                                                                                                                                                                                     <latexit sha1_base64="(null)">(null)</latexit>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                           x2
+                                                                                                                                                                                                                                                                                                                                                                                                                                                           <latexit sha1_base64="(null)">(null)</latexit>
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               x3                                                                                                                                                                                                                                  X̄   SK X
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               Logistic Regression
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               <latexit sha1_base64="(null)">(null)</latexit>
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               <latexit sha1_base64="(null)">(null)</latexit>
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                >
+                                                                                                                                                   X = [x1 , . . . , xn ]
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       Feature Value:                                                         ŶSGC = softmax X̄⇥
+                                                                                                                                                                                                    <latexit sha1_base64="(null)">(null)</latexit>
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          Class +1:                                            Class -1:                                                                                                                                                        Feature Vector:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    -1       0       +1
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              <latexit sha1_base64="(null)">(null)</latexit>
+
+
+
+
+Figure 1. Schematic layout of a GCN v.s. a SGC. Top row: The GCN transforms the feature vectors repeatedly throughout K layers
+and then applies a linear classifier on the final representation. Bottom row: the SGC reduces the entire procedure to a simple feature
+propagation step followed by standard logistic regression.
+
+
+strate that this method effectively shrinks the graph spectral                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             vi and vj . A missing edge is represented through aij = 0.
+domain, resulting in a low-pass-type filter when applied to                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                We define the degree matrix D = diag(d1 , . . . , dn ) as a
+SGC. Crucially, this filtering operation gives rise to locally                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             diagonal matrix where each entry on the diagonal
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        P is equal
+smooth features across the graph (Bruna et al., 2014).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     to the row-sum of the adjacency matrix di = j aij .
+Through an empirical assessment on node classification                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     Each node vi in the graph has a corresponding d-
+benchmark datasets for citation and social networks, we                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    dimensional feature vector xi ∈ Rd . The entire feature
+show that the SGC achieves comparable performance to                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       matrix X ∈ Rn×d stacks n feature vectors on top of one
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          >
+GCN and other state-of-the-art graph neural networks. How-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 another, X = [x1 , . . . , xn ] . Each node belongs to one
+ever, it is significantly faster, and even outperforms Fast-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               out of C classes and can be labeled with a C-dimensional
+GCN (Chen et al., 2018) by up to two orders of magnitude                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   one-hot vector yi ∈ {0, 1}C . We only know the labels of a
+on the largest dataset (Reddit) in our evaluation. Finally,                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                subset of the nodes and want to predict the unknown labels.
+we demonstrate that SGC extrapolates its effectiveness to a
+wide-range of downstream tasks. In particular, SGC rivals,                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 2.1. Graph Convolutional Networks
+if not surpasses, GCN-based approaches on text classifi-
+cation, user geolocation, relation extraction, and zero-shot                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               Similar to CNNs or MLPs, GCNs learn a new feature repre-
+image classification tasks. The code is available on Github1 .                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             sentation for the feature xi of each node over multiple layers,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           which is subsequently used as input into a linear classifier.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           For the k-th graph convolution layer, we denote the input
+2. Simple Graph Convolution                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                node representations of all nodes by the matrix H(k−1) and
+We follow Kipf & Welling (2017) to introduce GCNs (and                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     the output node representations H(k) . Naturally, the initial
+subsequently SGC) in the context of node classification.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   node representations are just the original input features:
+Here, GCNs take a graph with some labeled nodes as input                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  H(0) = X,                                                                                                                  (1)
+and generate label predictions for all graph nodes. Let
+us formally define such a graph as G = (V, A), where V                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     which serve as input to the first GCN layer.
+represents the vertex set consisting of nodes {v1 , . . . , vn },
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           A K-layer GCN is identical to applying a K-layer MLP
+and A ∈ Rn×n is a symmetric (typically sparse) adjacency
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           to the feature vector xi of each node in the graph, except
+matrix where aij denotes the edge weight between nodes
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           that the hidden representation of each node is averaged with
+                                                 1
+                                                                                                                                                                                                                                                     https://github.com/Tiiiger/SGC                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        its neighbors at the beginning of each layer. In each graph
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           convolution layer, node representations are updated in three
+                                             Simplifying Graph Convolutional Networks
+
+stages: feature propagation, linear transformation, and a          2.2. Simple Graph Convolution
+pointwise nonlinear activation (see Figure 1). For the sake
+                                                                   In a traditional MLP, deeper layers increase the expressivity
+of clarity, we describe each step in detail.
+                                                                   because it allows the creation of feature hierarchies, e.g.
+                                                                   features in the second layer build on top of the features of
+Feature propagation is what distinguishes a GCN from               the first layer. In GCNs, the layers have a second important
+an MLP. At the beginning of each layer the features hi of          function: in each layer the hidden representations are aver-
+each node vi are averaged with the feature vectors in its          aged among neighbors that are one hop away. This implies
+local neighborhood,                                                that after k layers a node obtains feature information from
+                             Xn                                    all nodes that are k−hops away in the graph. This effect
+   (k)          1    (k−1)              aij          (k−1)         is similar to convolutional neural networks, where depth
+ h̄i     ←          hi     +     p                  hj     .
+             di + 1          j=1
+                                  (di + 1)(d j + 1)                increases the receptive field of internal features (Hariharan
+                                                      (2)          et al., 2015). Although convolutional networks can bene-
+More compactly, we can express this update over the en-            fit substantially from increased depth (Huang et al., 2016),
+tire graph as a simple matrix operation. Let S denote the          typically MLPs obtain little benefit beyond 3 or 4 layers.
+“normalized” adjacency matrix with added self-loops,
+                                1        1
+                                                                   Linearization. We hypothesize that the nonlinearity be-
+                       S = D̃− 2 ÃD̃− 2 ,                  (3)    tween GCN layers is not critical - but that the majority of the
+                                                                   benefit arises from the local averaging. We therefore remove
+where Ã = A + I and D̃ is the degree matrix of Ã. The            the nonlinear transition functions between each layer and
+simultaneous update in Equation 2 for all nodes becomes a          only keep the final softmax (in order to obtain probabilistic
+simple sparse matrix multiplication                                outputs). The resulting model is linear, but still has the same
+                                                                   increased “receptive field” of a K-layer GCN,
+                       H̄(k) ← SH(k−1) .                    (4)
+                                                                                                                        
+                                                                       Ŷ = softmax S . . . SSXΘ(1) Θ(2) . . . Θ(K) . (7)
+Intuitively, this step smoothes the hidden representations lo-
+cally along the edges of the graph and ultimately encourages
+                                                                   To simplify notation we can collapse the repeated multi-
+similar predictions among locally connected nodes.
+                                                                   plication with the normalized adjacency matrix S into a
+                                                                   single matrix by raising S to the K-th power, SK . Fur-
+Feature transformation and nonlinear transition. Af-
+                                                                   ther, we can reparameterize our weights into a single matrix
+ter the local smoothing, a GCN layer is identical to a stan-
+                                                                   Θ = Θ(1) Θ(2) . . . Θ(K) . The resulting classifier becomes
+dard MLP. Each layer is associated with a learned weight
+matrix Θ(k) , and the smoothed hidden feature representa-                                              
+                                                                                  ŶSGC = softmax SK XΘ ,                     (8)
+tions are transformed linearly. Finally, a nonlinear activa-
+tion function such as ReLU is applied pointwise before             which we refer to as Simple Graph Convolution (SGC).
+outputting feature representation H(k) . In summary, the
+representation updating rule of the k-th layer is:
+                                                                   Logistic regression. Equation 8 gives rise to a natural and
+                                                                 intuitive interpretation of SGC: by distinguishing between
+               H(k) ← ReLU H̄(k) Θ(k) .                  (5)       feature extraction and classifier, SGC consists of a fixed
+                                                                   (i.e., parameter-free) feature extraction/smoothing compo-
+The pointwise nonlinear transformation of the k-th layer is        nent X̄ = SK X followed by a linear logistic regression
+followed by the feature propagation of the (k + 1)-th layer.       classifier Ŷ = softmax(X̄Θ). Since the computation of X̄
+                                                                   requires no weight it is essentially equivalent to a feature
+Classifier. For node classification, and similar to a stan-        pre-processing step and the entire training of the model re-
+dard MLP, the last layer of a GCN predicts the labels using a      duces to straight-forward multi-class logistic regression on
+softmax classifier. Denote the class predictions for n nodes       the pre-processed features X̄.
+as Ŷ ∈ Rn×C where ŷic denotes the probability of node
+i belongs to class c. The class prediction Ŷ of a K-layer         Optimization details. The training of logistic regression
+GCN can be written as:                                             is a well studied convex optimization problem and can
+                                                                 be performed with any efficient second order method or
+           ŶGCN = softmax SH(K−1) Θ(K) ,                 (6)      stochastic gradient descent (Bottou, 2010). Provided the
+                                    PC                             graph connectivity pattern is sufficiently sparse, SGD nat-
+where softmax(x) = exp(x)/           c=1 exp(xc ) acts as a nor-   urally scales to very large graph sizes and the training of
+malizer across all classes.                                        SGC is drastically faster than that of GCNs.
+                                            Simplifying Graph Convolutional Networks
+
+3. Spectral Analysis                                                by generalizing the convolution to work with multiple filters
+                                                                    in a d-channel input and layering the model with nonlinear
+We now study SGC from a graph convolution perspective.              activation functions between each layer, we have the GCN
+We demonstrate that SGC corresponds to a fixed filter on            propagation rule as defined in Equation 5.
+the graph spectral domain. In addition, we show that adding
+self-loops to the original graph, i.e. the renormalization trick
+                                                                    3.2. SGC and Low-Pass Filtering
+(Kipf & Welling, 2017), effectively shrinks the underlying
+graph spectrum. On this scaled domain, SGC acts as a low-           The initial first-order Chebyshev filter derived in GCNs
+pass filter that produces smooth features over the graph. As        corresponds to the propagation matrix S1-order = I +
+a result, nearby nodes tend to share similar representations        D−1/2 AD−1/2 (see Equation 11). Since the normalized
+and consequently predictions.                                       Laplacian is ∆sym = I − D−1/2 AD−1/2 , then S1-order =
+                                                                    2I − ∆sym . Therefore, feature propagation with SK     1-order im-
+3.1. Preliminaries on Graph Convolutions                            plies filter coefficients ĝi = ĝ(λi ) = (2 − λi )K , where λi
+                                                                    denotes the eigenvalues of ∆sym . Figure 2 illustrates the
+Analogous to the Euclidean domain, graph Fourier analysis           filtering operation related to S1-order for a varying number
+relies on the spectral decomposition of graph Laplacians.           of propagation steps K ∈ {1, . . . , 6}. As one may observe,
+The graph Laplacian ∆ = D − A (as well as its normalized            high powers of S1-order lead to exploding filter coefficients
+version ∆sym = D−1/2 ∆D−1/2 ) is a symmetric positive               and undesirably over-amplify signals at frequencies λi < 1.
+semidefinite matrix with eigendecomposition ∆ = UΛU> ,
+where U ∈ Rn×n comprises orthonormal eigenvectors and               To tackle potential numerical issues associated with the
+Λ = diag(λ1 , . . . , λn ) is a diagonal matrix of eigenvalues.     first-order Chebyshev filter, Kipf & Welling (2017) pro-
+The eigendecomposition of the Laplacian allows us to define         pose the renormalization trick. Basically, it consists of
+the Fourier transform equivalent on the graph domain, where         replacing S1-order by the normalized adjacency matrix af-
+eigenvectors denote Fourier modes and eigenvalues denote            ter adding self-loops for all nodes. We call the resulting
+frequencies of the graph. In this regard, let x ∈ Rn be a           propagation matrix the augmented normalized adjacency
+signal defined on the vertices of the graph. We define the          matrix S̃adj = D̃−1/2 ÃD̃−1/2 , where Ã = A + I and
+graph Fourier transform of x as x̂ = U> x, with inverse             D̃ = D + I. Correspondingly, we define the augmented
+operation given by x = Ux̂. Thus, the graph convolution             normalized Laplacian ∆      ˜ sym = I − D̃−1/2 ÃD̃−1/2 . Thus,
+operation between signal x and filter g is                          we can describe the spectral filters associated with S̃adj as a
+                                                                   polynomial of the eigenvalues of the underlying Laplacian,
+       g ∗ x = U (U> g) (U> x) = UĜU> x,                   (9)                                                                 ˜ sym .
+                                                                    i.e., ĝ(λ̃i ) = (1 − λ̃i )K , where λ̃i are eigenvalues of ∆
+
+where Ĝ = diag (ĝ1 , . . . , ĝn ) denotes a diagonal matrix in   We now analyze the spectrum of ∆ ˜ sym and show that adding
+which the diagonal corresponds to spectral filter coefficients.     self-loops to graphs shrinks the spectrum (eigenvalues) of
+                                                                    the corresponding normalized Laplacian.
+Graph convolutions can be approximated by k-th order poly-
+nomials of Laplacians                                               Theorem 1. Let A be the adjacency matrix of an undirected,
+                                                                    weighted, simple graph G without isolated nodes and with
+                                           !
+               Xk                Xk                                 corresponding degree matrix D. Let Ã = A + γI, such that
+         >
+  UĜU x ≈             i
+                   θi ∆ x = U        θi Λ U> x, (10)
+                                         i
+                                                                    γ > 0, be the augmented adjacency matrix with correspond-
+                 i=0                  i=0                           ing degree matrix D̃. Also, let λ1 and λn denote the smallest
+where θi denotes coefficients. In this case, filter coefficients    and largest eigenvalues of ∆sym = I−D−1/2 AD−1/2 ; sim-
+correspond                                                          ilarly, let λ̃1 and λ̃n be the smallest and largest eigenvalues
+      P to polynomials of the Laplacian   P eigenvalues, i.e.,      of ∆˜ sym = I − D̃−1/2 ÃD̃−1/2 . We have that
+Ĝ = i θi Λi or equivalently ĝ(λj ) = i θi λij .
+Graph Convolutional Networks (GCNs) (Kipf & Welling,                                  0 = λ1 = λ̃1 < λ̃n < λn .                  (12)
+2017) employ an affine approximation (k = 1) of Equa-
+tion 10 with coefficients θ0 = 2θ and θ1 = −θ from which
+                                                                    Theorem 1 shows that the largest eigenvalue of the normal-
+we attain the basic GCN convolution operation
+                                                                    ized graph Laplacian becomes smaller after adding self-
+             g ∗ x = θ(I + D−1/2 AD−1/2 )x.                (11)     loops γ > 0 (see supplementary materials for the proof).
+                                                                    Figure 2 depicts the filtering operations associated with
+In their final design, Kipf & Welling (2017) replace                the normalized adjacency Sadj = D−1/2 AD−1/2 and its
+the matrix I + D−1/2 AD−1/2 by a normalized version                 augmented variant S̃adj = D̃−1/2 ÃD̃−1/2 on the Cora
+D̃−1/2 ÃD̃−1/2 where Ã = A + I and consequently                   dataset (Sen et al., 2008). Feature propagation with Sadj cor-
+D̃ = D + I, dubbed the renormalization trick. Finally,              responds to filters g(λi ) = (1 − λi )K in the spectral range
+                                                                   Simplifying Graph Convolutional Networks
+
+                                              First-Order Chebyshev                Normalized Adj.              Augmented Normalized Adj.
+
+
+
+
+               Spectral Coefficient
+                                      8                                    1                                1
+
+
+                                      4                                    0                                0
+                                      2
+                                      0
+                                                                          −1                               −1
+                                          0             1             2        0          1            2        0           1           2
+                                                  Eigenvalue (λ)                    Eigenvalue (λ)                    Eigenvalue (λ)
+
+                                              K=1              K=2                 K=3               K=4             K=5               K=6
+
+
+Figure 2. Feature (red) and filters (blue) spectral coefficients for different propagation matrices on Cora dataset (3rd feature).
+
+
+[0, 2]; therefore odd powers of Sadj yield negative filter coef-                            show that a linear version of GCN can perform competitively
+ficients at frequencies λi > 1. By adding self-loops (S̃adj ),                              and propose an attention-based GCN variant. Cai & Wang
+the largest eigenvalue shrinks from 2 to approximately 1.5                                  (2018) propose an effective linear baseline for graph classi-
+and then eliminates the effect of negative coefficients. More-                              fication using node degree statistics. Eliav & Cohen (2018)
+over, this scaled spectrum allows the filter defined by taking                              show that models which use linear feature/label propaga-
+powers K > 1 of S̃adj to act as a low-pass-type filters. In                                 tion steps can benefit from self-training strategies. Li et al.
+supplementary material, we empirically evaluate different                                   (2019) propose a generalized version of label propagation
+choices for the propagation matrix.                                                         and provide a similar spectral analysis of the renormaliza-
+                                                                                            tion trick.
+4. Related Works                                                                            Graph Attentional Models learn to assign different edge
+                                                                                            weights at each layer based on node features and have
+4.1. Graph Neural Networks                                                                  achieved state-of-the-art results on several graph learning
+Bruna et al. (2014) first propose a spectral graph-based                                    tasks (Velickovic et al., 2018; Thekumparampil et al., 2018;
+extension of convolutional networks to graphs. In a follow-                                 Zhang et al., 2018a; Kampffmeyer et al., 2018). However,
+up work, ChebyNets (Defferrard et al., 2016) define graph                                   the attention mechanism usually adds significant overhead
+convolutions using Chebyshev polynomials to remove the                                      to computation and memory usage. We refer the readers to
+computationally expensive Laplacian eigendecomposition.                                     Lee et al. (2018) for further comparison.
+GCNs (Kipf & Welling, 2017) further simplify graph con-
+volutions by stacking layers of first-order Chebyshev poly-                                 4.2. Other Works on Graphs
+nomial filters with a redefined propagation matrix S. Chen
+                                                                                            Graph methodologies can roughly be categorized into two
+et al. (2018) propose an efficient variant of GCN based on
+                                                                                            approaches: graph embedding methods and graph laplacian
+importance sampling, and Hamilton et al. (2017) propose
+                                                                                            regularization methods. Graph embedding methods (Weston
+a framework based on sampling and aggregation. Atwood
+                                                                                            et al., 2008; Perozzi et al., 2014; Yang et al., 2016; Velikovi
+& Towsley (2016), Abu-El-Haija et al. (2018), and Liao
+                                                                                            et al., 2019) represent nodes as high-dimensional feature
+et al. (2019) exploit multi-scale information by raising S to
+                                                                                            vectors. Among them, DeepWalk (Perozzi et al., 2014) and
+higher order. Xu et al. (2019) study the expressiveness of
+                                                                                            Deep Graph Infomax (DGI) (Velikovi et al., 2019) use un-
+graph neural networks in terms of their ability to distinguish
+                                                                                            supervised strategies to learn graph embeddings. DeepWalk
+any two graphs and introduce Graph Isomorphism Network,
+                                                                                            relies on truncated random walk and uses a skip-gram model
+which is proved to be as powerful as the Weisfeiler-Lehman
+                                                                                            to generate embeddings, whereas DGI trains a graph convo-
+test for graph isomorphism. Klicpera et al. (2019) separate
+                                                                                            lutional encoder through maximizing mutual information.
+the non-linear transformation from propagation by using a
+                                                                                            Graph Laplacian regularization (Zhu et al., 2003; Zhou et al.,
+neural network followed by a personalized random walk.
+                                                                                            2004; Belkin & Niyogi, 2004; Belkin et al., 2006) introduce
+There are many other graph neural models (Monti et al.,
+                                                                                            a regularization term based on graph structure which forces
+2017; Duran & Niepert, 2017; Li et al., 2018); we refer to
+                                                                                            nodes to have similar labels to their neighbors. Label Prop-
+Zhou et al. (2018); Battaglia et al. (2018); Wu et al. (2019)
+                                                                                            agation (Zhu et al., 2003) makes predictions by spreading
+for a more comprehensive review.
+                                                                                            label information from labeled nodes to their neighbors until
+Previous publications have pointed out that simpler, some-                                  convergence.
+times linear models can be effective for node/graph classi-
+fication tasks. Thekumparampil et al. (2018) empirically
+                                                                  Simplifying Graph Convolutional Networks
+
+                                                           Pubmed                                                                           Reddit
+                              80                                                                              97
+                                                                                                                              GaAN
+                                    SGC                    GCN                                                96                                                  SAGE-LSTM
+                                                           28x                                                      SGC                          SAGE-mean           180x
+                                     1x                                                                              1x                             29x
+                              79                                            DGI GAT LNet
+
+
+               Test Acc (%)
+                                                                                                              95
+
+                                                                                                Test F1 (%)
+                                                                            260x 415x 909x
+                                                                                                                               DGI
+                                                                                                              94
+                              78             FastGCN                                                                                                              FastGCN
+                                                6x                                                            93
+                                                                                                                                                                    100x
+                                                                    GIN           AdaLNet                                                          SAGE-GCN
+                                                                    89x            758x                                                               32x
+                                                                                                              92
+                              77
+                                         0             1               2                    3
+                                    10            10                  10               10                           100                     101                    102
+                                                   Relative Training Time                                                            Relative Training Time
+
+
+
+Figure 3. Performance over training time on Pubmed and Reddit. SGC is the fastest while achieving competitive performance. We are not
+able to benchmark the training time of GaAN and DGI on Reddit because the implementations are not released.
+
+
+
+Table 1. Dataset statistics of the citation networks and Reddit.                                   Table 2. Test accuracy (%) averaged over 10 runs on citation net-
+    Dataset     # Nodes # Edges Train/Dev/Test Nodes                                               works. † We remove the outliers (accuracy < 75/65/75%) when
+                                                                                                   calculating their statistics due to high variance.
+    Cora                       2, 708        5, 429           140/500/1, 000
+    Citeseer                   3, 327        4, 732           120/500/1, 000                                                            Cora                  Citeseer         Pubmed
+    Pubmed                    19, 717        44, 338           60/500/1, 000                                       Numbers from literature:
+    Reddit                         233K      11.6M               152K/24K/55K                                      GCN            81.5                       70.3                79.0
+                                                                                                                   GAT        83.0 ± 0.7                  72.5 ± 0.7          79.0 ± 0.3
+                                                                                                                   GLN        81.2 ± 0.1                  70.9 ± 0.1          78.9 ± 0.1
+                                                                                                                   AGNN       83.1 ± 0.1                  71.7 ± 0.1          79.9 ± 0.1
+                                                                                                                   LNet       79.5 ± 1.8                  66.2 ± 1.9          78.3 ± 0.3
+5. Experiments and Discussion                                                                                      AdaLNet    80.4 ± 1.1                  68.7 ± 1.0          78.1 ± 0.4
+                                                                                                                   DeepWalk   70.7 ± 0.6                  51.4 ± 0.5          76.8 ± 0.6
+We first evaluate SGC on citation networks and social net-                                                         DGI        82.3 ± 0.6                  71.8 ± 0.7          76.8 ± 0.6
+works and then extend our empirical analysis to a wide                                                             Our experiments:
+range of downstream tasks.                                                                                         GCN        81.4 ± 0.4                 70.9 ± 0.5           79.0 ± 0.4
+                                                                                                                   GAT        83.3 ± 0.7                 72.6 ± 0.6           78.5 ± 0.3
+5.1. Citation Networks & Social Networks                                                                           FastGCN    79.8 ± 0.3                 68.8 ± 0.6           77.4 ± 0.3
+                                                                                                                   GIN        77.6 ± 1.1                 66.1 ± 0.9           77.0 ± 1.2
+We evaluate the semi-supervised node classification perfor-                                                        LNet       80.2 ± 3.0†                67.3 ± 0.5           78.3 ± 0.6†
+mance of SGC on the Cora, Citeseer, and Pubmed citation                                                            AdaLNet    81.9 ± 1.9†                70.6 ± 0.8†          77.8 ± 0.7†
+network datasets (Table 2) (Sen et al., 2008). We supplement                                                       DGI        82.5 ± 0.7                 71.6 ± 0.7           78.4 ± 0.7
+                                                                                                                   SGC        81.0 ± 0.0                 71.9 ± 0.1           78.9 ± 0.0
+our citation network analysis by using SGC to inductively
+predict community structure on Reddit (Table 3), which
+consists of a much larger graph. Dataset statistics are sum-                                       Table 3. Test Micro F1 Score (%) averaged over 10 runs on Red-
+marized in Table 1.                                                                                dit. Performances of models are cited from their original papers.
+                                                                                                   OOM: Out of memory.
+                                                                                                                          Setting              Model                        Test F1
+Datasets and experimental setup. On the citation net-                                                                                          GaAN                         96.4
+works, we train SGC for 100 epochs using Adam (Kingma                                                                                          SAGE-mean                    95.0
+& Ba, 2015) with learning rate 0.2. In addition, we use                                                                   Supervised           SAGE-LSTM                    95.4
+weight decay and tune this hyperparameter on each dataset                                                                                      SAGE-GCN                     93.0
+                                                                                                                                               FastGCN                      93.7
+using hyperopt (Bergstra et al., 2015) for 60 iterations on                                                                                    GCN                          OOM
+the public split validation set. Experiments on citation net-
+                                                                                                                                               SAGE-mean                    89.7
+works are conducted transductively. On the Reddit dataset,
+                                                                                                                          Unsupervised         SAGE-LSTM                    90.7
+we train SGC with L-BFGS (Liu & Nocedal, 1989) using                                                                                           SAGE-GCN                     90.8
+no regularization, and remarkably, training converges in 2                                                                                     DGI                          94.0
+steps. We evaluate SGC inductively by following Chen et al.                                                                                    Random-Init DGI              93.3
+(2018): we train SGC on a subgraph comprising only train-                                                                 No Learning
+                                                                                                                                               SGC                          94.9
+ing nodes and test with the original graph. On all datasets,
+we tune the number of epochs based on both convergence
+behavior and validation accuracy.
+                                          Simplifying Graph Convolutional Networks
+
+Baselines. For citation networks, we compare against
+                                                                 Table 4. Test Accuracy (%) on text classification datasets. The
+GCN (Kipf & Welling, 2017) GAT (Velickovic et al., 2018)
+                                                                 numbers are averaged over 10 runs.
+FastGCN (Chen et al., 2018) LNet, AdaLNet (Liao et al.,
+                                                                     Dataset      Model    Test Acc. ↑    Time (seconds) ↓
+2019) and DGI (Velikovi et al., 2019) using the publicly
+released implementations. Since GIN is not initially eval-                        GCN       87.9 ± 0.2    1205.1 ± 144.5
+                                                                     20NG
+uated on citation networks, we implement GIN following                            SGC       88.5 ± 0.1     19.06 ± 0.15
+Xu et al. (2019) and use hyperopt to tune weight decay and                        GCN       97.0 ± 0.2      129.6 ± 9.9
+                                                                     R8
+learning rate for 60 iterations. Moreover, we tune the hidden                     SGC       97.2 ± 0.1      1.90 ± 0.03
+dimension by hand.                                                   R52
+                                                                                  GCN       93.8 ± 0.2     245.0 ± 13.0
+                                                                                  SGC       94.0 ± 0.2      3.01 ± 0.01
+For Reddit, we compare SGC to the reported performance of
+                                                                                  GCN       68.2 ± 0.4     252.4 ± 14.7
+GaAN (Zhang et al., 2018a), supervised and unsupervised              Ohsumed
+                                                                                  SGC       68.5 ± 0.3      3.02 ± 0.02
+variants of GraphSAGE (Hamilton et al., 2017), FastGCN,
+and DGI. Table 3 also highlights the setting of the feature                       GCN       76.3 ± 0.3       16.1 ± 0.4
+                                                                     MR
+                                                                                  SGC       75.9 ± 0.3      4.00 ± 0.04
+extraction step for each method. We note that SGC involves
+no learning because the feature extraction step, SK X, has no
+parameter. Both unsupervised and no-learning approaches
+                                                                 Table 5. Test accuracy (%) within 161 miles on semi-supervised
+train logistic regression models with labels afterward.          user geolocation. The numbers are averaged over 5 runs.
+                                                                  Dataset                 Model     Acc.@161↑          Time ↓
+Performance. Based on results in Table 2 and Table 3, we                                  GCN+H      60.6 ± 0.2        153.0s
+conclude that SGC is very competitive. Table 2 shows the          GEOTEXT
+                                                                                          SGC        61.1 ± 0.1          5.6s
+performance of SGC can match the performance of GCN                                       GCN+H      61.9 ± 0.2       9h 54m
+and state-of-the-art graph networks on citation networks. In      TWITTER-US
+                                                                                          SGC        62.5 ± 0.1       4h 33m
+particular on Citeseer, SGC is about 1% better than GCN,                                  GCN+H      53.6 ± 0.2   2d 05h 17m
+and we reason this performance boost is caused by SGC             TWITTER-WORLD
+                                                                                          SGC        54.1 ± 0.2      22h 53m
+having fewer parameters and therefore suffering less from
+overfitting. Remarkably, GIN performs slight worse because
+of overfitting. Also, both LNet and AdaLNet are unstable         we can exploit fast sparse-dense matrix multiplication to
+on citation networks. On Reddit, Table 3 shows that SGC          compute SK X. Figure 3 shows that SGC can be trained up
+outperforms the previous sampling-based GCN variants,            to two orders of magnitude faster than fast sampling-based
+SAGE-GCN and FastGCN by more than 1%.                            methods while having little or no drop in performance.
+Notably, Velikovi et al. (2019) report that the performance of
+a randomly initialized DGI encoder nearly matches that of a      5.2. Downstream Tasks
+trained encoder; however, both models underperform SGC
+                                                                 We extend our empirical evaluation to 5 downstream appli-
+on Reddit. This result may suggest that the extra weights
+                                                                 cations — text classification, semi-supervised user geoloca-
+and nonlinearities in the DGI encoder are superfluous, if not
+                                                                 tion, relation extraction, zero-shot image classification, and
+outright detrimental.
+                                                                 graph classification — to study the applicability of SGC.
+                                                                 We describe experimental setup in supplementary materials.
+Efficiency. In Figure 3, we plot the performance of the
+state-of-the-arts graph networks over their training time rel-   Text classification assigns labels to documents. Yao et al.
+ative to that of SGC on the Pubmed and Reddit datasets. In       (2019) use a 2-layer GCN to achieve state-of-the-art results
+particular, we precompute SK X and the training time of          by creating a corpus-level graph which treats both docu-
+SGC takes into account this precomputation time. We mea-         ments and words as nodes in a graph. Word-word edge
+sure the training time on a NVIDIA GTX 1080 Ti GPU and           weights are pointwise mutual information (PMI) and word-
+present the benchmark details in supplementary materials.        document edge weights are normalized TF-IDF scores. Ta-
+On large graphs (e.g. Reddit), GCN cannot be trained due         ble 4 shows that an SGC (K = 2) rivals their model on 5
+to excessive memory requirements. Previous approaches            benchmark datasets, while being up to 83.6× faster.
+tackle this limitation by either sampling to reduce neigh-
+borhood size (Chen et al., 2018; Hamilton et al., 2017) or       Semi-supervised user geolocation locates the “home”
+limiting their model sizes (Velikovi et al., 2019). By apply-    position of users on social media given users’ posts, con-
+ing a fixed filter and precomputing SK X, SGC minimizes          nections among users, and a small number of labelled users.
+memory usage and only learns a single weight matrix during       Rahimi et al. (2018) apply GCNs with highway connections
+training. Since S is typically sparse and K is usually small,    on this task and achieve close to state-of-the-art results. Ta-
+                                          Simplifying Graph Convolutional Networks
+
+                                                                  Graph classification requires models to use graph struc-
+Table 6. Test Accuracy (%) on Relation Extraction. The numbers
+                                                                  ture to categorize graphs. Xu et al. (2019) theoretically
+are averaged over 10 runs.
+                                                                  show that GCNs are not sufficient to distinguish certain
+     TACRED                            Test Accuracy ↑            graph structures and show that their GIN is more expressive
+     C-GCN (Zhang et al., 2018c)             66.4                 and achieves state-of-the-art results on various graph classi-
+     C-GCN                                66.4 ± 0.4              fication datasets. We replace the GCN in DCGCN (Zhang
+     C-SGC                                67.0 ± 0.4              et al., 2018b) with an SGC and get 71.0% and 76.2% on
+                                                                  NCI1 and COLLAB datasets (Yanardag & Vishwanathan,
+                                                                  2015) respectively, which is on par with an GCN counterpart,
+Table 7. Top-1 accuracy (%) averaged over 10 runs in the 2-       but far behind GIN. Similarly, on QM8 quantum chemistry
+hop and 3-hop setting of the zero-shot image task on ImageNet.    dataset (Ramakrishnan et al., 2015), more advanced AdaL-
+ADGPM (Kampffmeyer et al., 2018) and EXEM 1-nns (Chang-           Net and LNet (Liao et al., 2019) get 0.01 MAE on QM8,
+pinyo et al., 2018) use more powerful visual features.            outperforming SGC’s 0.03 MAE by a large margin.
+ Model               # Param. ↓   2-hop Acc. ↑   3-hop Acc. ↑
+ Unseen categories only:
+ EXEM 1-nns          -            27.0           7.1
+                                                                  6. Conclusion
+ ADGPM               -            26.6           6.3
+ GCNZ                -            19.8           4.1              In order to better understand and explain the mechanisms
+ GCNZ (ours)         9.5M         20.9 ± 0.2     4.3 ± 0.0        of GCNs, we explore the simplest possible formulation of a
+ MLP-SGCZ (ours) 4.3M             21.2 ± 0.2     4.4 ± 0.1        graph convolutional model, SGC. The algorithm is almost
+ Unseen categories & seen categories:                             trivial, a graph based pre-processing step followed by stan-
+ ADGPM               -            10.3           2.9              dard multi-class logistic regression. However, the perfor-
+ GCNZ                -            9.7            2.2
+ GCNZ (ours)         9.5M         10.0 ± 0.2     2.4 ± 0.0        mance of SGC rivals — if not surpasses — the performance
+ MLP-SGCZ (ours) 4.3M             10.5 ± 0.1     2.5 ± 0.0        of GCNs and state-of-the-art graph neural network mod-
+                                                                  els across a wide range of graph learning tasks. Moreover
+                                                                  by precomputing the fixed feature extractor SK , training
+ble 5 shows that SGC outperforms GCN with highway con-            time is reduced to a record low. For example on the Reddit
+nections on GEOTEXT (Eisenstein et al., 2010), TWITTER-           dataset, SGC can be trained up to two orders of magnitude
+US (Roller et al., 2012), and TWITTER-WORLD (Han                  faster than sampling-based GCN variants.
+et al., 2012) under Rahimi et al. (2018)’s framework, while       In addition to our empirical analysis, we analyze SGC from
+saving 30+ hours on TWITTER-WORLD.                                a convolution perspective and manifest this method as a
+                                                                  low-pass-type filter on the spectral domain. Low-pass-type
+Relation extraction involves predicting the relation be-          filters capture low-frequency signals, which corresponds
+tween subject and object in a sentence. Zhang et al.              with smoothing features across a graph in this setting. Our
+(2018c) propose C-GCN which uses an LSTM (Hochre-                 analysis also provides insight into the empirical boost of
+iter & Schmidhuber, 1997) followed by a GCN and an MLP.           the “renormalization trick” and demonstrates how shrinking
+We replace GCN with SGC (K = 2) and call the resulting            the spectral domain leads to a low-pass-type filter which
+model C-SGC. Table 6 shows that C-SGC sets new state-of-          underpins SGC.
+the-art on TACRED (Zhang et al., 2017).
+                                                                  Ultimately, the strong performance of SGC sheds light onto
+Zero-shot image classification consists of learning an            GCNs. It is likely that the expressive power of GCNs origi-
+image classifier without access to any images or labels from      nates primarily from the repeated graph propagation (which
+the test categories. GCNZ (Wang et al., 2018) uses a GCN          SGC preserves) rather than the nonlinear feature extraction
+to map the category names — based on their relations in           (which it doesn’t.)
+WordNet (Miller, 1995) — to image feature domain, and             Given its empirical performance, efficiency, and inter-
+find the most similar category to a query image feature           pretability, we argue that the SGC should be highly ben-
+vector. Table 7 shows that replacing GCN with an MLP              eficial to the community in at least three ways: (1) as a
+followed by SGC can improve performance while reducing            first model to try, especially for node classification tasks;
+the number of parameters by 55%. We find that an MLP              (2) as a simple baseline for comparison with future graph
+feature extractor is necessary in order to map the pretrained     learning models; (3) as a starting point for future research in
+GloVe vectors to the space of visual features extracted by        graph learning — returning to the historic machine learning
+a ResNet-50. Again, this downstream application demon-            practice to develop complex from simple models.
+strates that learned graph convolution filters are superfluous;
+similar to Changpinyo et al. (2018)’s observation that GCNs
+may not be necessary.
+                                         Simplifying Graph Convolutional Networks
+
+Acknowledgement                                                 Cai, C. and Wang, Y. A simple yet effective baseline for
+                                                                  non-attribute graph classification, 2018.
+This research is supported in part by grants from the
+National Science Foundation (III-1618134, III-1526012,          Changpinyo, S., Chao, W.-L., Gong, B., and Sha, F. Classi-
+IIS1149882, IIS-1724282, and TRIPODS-1740822), the                fier and exemplar synthesis for zero-shot learning. arXiv
+Office of Naval Research DOD (N00014-17-1-2175), Bill             preprint arXiv:1812.06423, 2018.
+and Melinda Gates Foundation, and Facebook Research.
+We are thankful for generous support by SAP America Inc.        Chen, J., Ma, T., and Xiao, C. FastGCN: Fast Learning with
+Amauri Holanda de Souza Jr. thanks CNPq (Brazilian Coun-          Graph Convolutional Networks via Importance Sampling.
+cil for Scientific and Technological Development) for the         In International Conference on Learning Representations
+financial support. We appreciate the discussion with Xiang        (ICLR’2018), 2018.
+Fu, Shengyuan Hu, Shangdi Yu, Wei-Lun Chao and Geoff            Defferrard, M., Bresson, X., and Vandergheynst, P. Con-
+Pleiss as well as the figure design support from Boyi Li.         volutional neural networks on graphs with fast localized
+                                                                  spectral filtering. In Lee, D. D., Sugiyama, M., Luxburg,
+References                                                        U. V., Guyon, I., and Garnett, R. (eds.), Advances in Neu-
+                                                                  ral Information Processing Systems 29, pp. 3844–3852.
+Abu-El-Haija, S., Kapoor, A., Perozzi, B., and Lee, J. N-         Curran Associates, Inc., 2016.
+  GCN: Multi-scale graph convolution for semi-supervised
+  node classification. arXiv preprint arXiv:1802.08888,         Duran, A. G. and Niepert, M. Learning graph representa-
+  2018.                                                           tions with embedding propagation. In Guyon, I., Luxburg,
+                                                                  U. V., Bengio, S., Wallach, H., Fergus, R., Vishwanathan,
+Atwood, J. and Towsley, D. Diffusion-convolutional neural         S., and Garnett, R. (eds.), Advances in Neural Informa-
+  networks. In Lee, D. D., Sugiyama, M., Luxburg, U. V.,          tion Processing Systems 30, pp. 5119–5130. Curran As-
+  Guyon, I., and Garnett, R. (eds.), Advances in Neural In-       sociates, Inc., 2017.
+  formation Processing Systems 29, pp. 1993–2001. Curran
+  Associates, Inc., 2016.                                       Eisenstein, J., O’Connor, B., Smith, N. A., and Xing, E. P.
+                                                                  A latent variable model for geographic lexical variation.
+Battaglia, P. W., Hamrick, J. B., Bapst, V., Sanchez-             In Proceedings of the 2010 Conference on Empirical
+  Gonzalez, A., Zambaldi, V., Malinowski, M., Tacchetti,          Methods in Natural Language Processing, pp. 1277–1287.
+  A., Raposo, D., Santoro, A., Faulkner, R., et al. Rela-         Association for Computational Linguistics, 2010.
+  tional inductive biases, deep learning, and graph networks.
+  arXiv preprint arXiv:1806.01261, 2018.                        Eliav, B. and Cohen, E. Bootstrapped graph diffusions: Ex-
+                                                                  posing the power of nonlinearity. Proceedings of the ACM
+Belkin, M. and Niyogi, P. Semi-supervised learning on             on Measurement and Analysis of Computing Systems, 2
+  riemannian manifolds. Machine Learning, 56(1-3):209–            (1):10:1–10:19, 2018.
+  239, 2004.
+                                                                Hamilton, W., Ying, Z., and Leskovec, J. Inductive repre-
+Belkin, M., Niyogi, P., and Sindhwani, V. Manifold regular-       sentation learning on large graphs. In Guyon, I., Luxburg,
+  ization: A geometric framework for learning from labeled        U. V., Bengio, S., Wallach, H., Fergus, R., Vishwanathan,
+  and unlabeled examples. Journal of Machine Learning             S., and Garnett, R. (eds.), Advances in Neural Informa-
+  Research, 7:2399–2434, 2006.                                    tion Processing Systems 30, pp. 1024–1034. Curran As-
+                                                                  sociates, Inc., 2017.
+Bergstra, J., Komer, B., Eliasmith, C., Yamins, D., and Cox,    Han, B., Cook, P., and Baldwin, T. Geolocation prediction
+  D. D. Hyperopt: A python library for optimizing the             in social media data by finding location indicative words.
+  hyperparameters of machine learning algorithms. Com-            In Proceedings of the 24th International Conference on
+  putational Science & Discovery, 8(1), 2015.                     Computational Linguistics, pp. 1045–1062, 2012.
+Bottou, L. Large-scale machine learning with stochastic         Hariharan, B., Arbeláez, P., Girshick, R., and Malik, J.
+  gradient descent. In Proceedings of 19th International          Hypercolumns for object segmentation and fine-grained
+  Conference on Computational Statistics, pp. 177–186.            localization. In Proceedings of the IEEE conference on
+  Springer, 2010.                                                 computer vision and pattern recognition, pp. 447–456,
+                                                                  2015.
+Bruna, J., Zaremba, W., Szlam, A., and Lecun, Y. Spectral
+  networks and locally connected networks on graphs. In         Harris, C. and Stephens, M. A combined corner and edge de-
+  International Conference on Learning Representations            tector. In Proceedings of the 4th Alvey Vision Conference,
+  (ICLR’2014), 2014.                                              pp. 147–151, 1988.
+                                        Simplifying Graph Convolutional Networks
+
+Hochreiter, S. and Schmidhuber, J. Long Short-Term Mem-        Monti, F., Boscaini, D., Masci, J., Rodolà, E., Svoboda, J.,
+  ory. Neural Computation, 9:1735–1780, 1997.                   and Bronstein, M. M. Geometric deep learning on graphs
+                                                                and manifolds using mixture model cnns. In 2017 IEEE
+Huang, G., Sun, Y., Liu, Z., Sedra, D., and Weinberger,         Conference on Computer Vision and Pattern Recognition,
+  K. Q. Deep networks with stochastic depth. In European        CVPR 2017, Honolulu, HI, USA, July 21-26, 2017, pp.
+ Conference on Computer Vision, pp. 646–661. Springer,          5425–5434, 2017.
+  2016.
+                                                               Perozzi, B., Al-Rfou, R., and Skiena, S. Deepwalk: Online
+Kampffmeyer, M., Chen, Y., Liang, X., Wang, H., Zhang, Y.,       learning of social representations. In Proceedings of the
+  and Xing, E. P. Rethinking knowledge graph propagation         20th ACM SIGKDD International Conference on Knowl-
+  for zero-shot learning. arXiv preprint arXiv:1805.11724,       edge Discovery and Data Mining, KDD’14, pp. 701–710.
+  2018.                                                          ACM, 2014.
+
+Kingma, D. P. and Ba, J. Adam: A method for stochastic         Rahimi, S., Cohn, T., and Baldwin, T. Semi-supervised
+  optimization. In International Conference on Learning          user geolocation via graph convolutional networks. In
+  Representations (ICLR’2015), 2015.                             Proceedings of the 56th Annual Meeting of the Associ-
+                                                                 ation for Computational Linguistics (Volume 1: Long
+Kipf, T. N. and Welling, M. Semi-supervised classifica-          Papers), pp. 2009–2019. Association for Computational
+  tion with graph convolutional networks. In International       Linguistics, 2018.
+  Conference on Learning Representations (ICLR’2017),
+  2017.                                                        Ramakrishnan, R., Hartmann, M., Tapavicza, E., and von
+                                                                 Lilienfeld, O. A. Electronic spectra from TDDFT and
+Klicpera, J., Bojchevski, A., and Günnemann, S. Predict         machine learning in chemical space. The Journal of
+  then propagate: Graph neural networks meet personal-           chemical physics, 143(8):084111, 2015.
+  ized pagerank. In International Conference on Learning
+  Representations (ICLR’2019), 2019.                           Roller, S., Speriosu, M., Rallapalli, S., Wing, B., and
+                                                                 Baldridge, J. Supervised text-based geolocation using
+LeCun, Y., Boser, B., Denker, J. S., Henderson, D., Howard,      language models on an adaptive grid. In Proceedings
+  R. E., Hubbard, W., and Jackel, L. D. Backpropaga-             of the 2012 Joint Conference on Empirical Methods in
+  tion applied to handwritten zip code recognition. Neural       Natural Language Processing and Computational Natu-
+  Computation, 1(4):541–551, 1989.                               ral Language Learning, pp. 1500–1510. Association for
+                                                                 Computational Linguistics, 2012.
+Lee, J. B., Rossi, R. A., Kim, S., Ahmed, N. K., and Koh,
+  E. Attention models in graphs: A survey. arXiv e-prints,     Rosenblatt, F. The Perceptron: a probabilistic model for
+  2018.                                                          information storage and organization in the brain. Psy-
+                                                                 chological review, 65(6):386, 1958.
+Li, Q., Han, Z., and Wu, X. Deeper insights into graph con-
+                                                               Rosenblatt, F. Principles of neurodynamics: Perceptrons
+  volutional networks for semi-supervised learning. CoRR,
+                                                                 and the theory of brain mechanisms. Technical report,
+  abs/1801.07606, 2018.
+                                                                 Cornell Aeronautical Lab Inc, 1961.
+Li, Q., Wu, X.-M., Liu, H., Zhang, X., and Guan, Z. Label      Sen, P., Namata, G., Bilgic, M., Getoor, L., Galligher, B.,
+  efficient semi-supervised learning via graph filtering. In     and Eliassi-Rad, T. Collective classification in network
+  IEEE/CVF Conference on Computer Vision and Pattern             data. AI magazine, 29(3):93, 2008.
+  Recognition (CVPR), 2019.
+                                                               Sobel, I. and Feldman, G. A 3x3 isotropic gradient operator
+Liao, R., Zhao, Z., Urtasun, R., and Zemel, R. Lanczos-          for image processing. A talk at the Stanford Artificial
+  net: Multi-scale deep graph convolutional networks. In         Project, pp. 271–272, 1968.
+  International Conference on Learning Representations
+  (ICLR’2019), 2019.                                           Thekumparampil, K. K., Wang, C., Oh, S., and Li,
+                                                                 L. Attention-based graph neural network for semi-
+Liu, D. C. and Nocedal, J. On the limited memory BFGS            supervised learning. arXiv e-prints, 2018.
+  method for large scale optimization. Mathematical Pro-
+  gramming, 45(1-3):503–528, 1989.                             Velickovic, P., Cucurull, G., Casanova, A., Romero, A.,
+                                                                 Liò, P., and Bengio, Y. Graph Attention Networks. In
+Miller, G. A. Wordnet: a lexical database for english. Com-      International Conference on Learning Representations
+ munications of the ACM, 38(11):39–41, 1995.                     (ICLR’2018), 2018.
+                                         Simplifying Graph Convolutional Networks
+
+Velikovi, P., Fedus, W., Hamilton, W. L., Li, P., Bengio, Y.,   Zhang, Y., Qi, P., and Manning, C. D. Graph convolution
+  and Hjelm, R. D. Deep Graph InfoMax. In International           over pruned dependency trees improves relation extrac-
+  Conference on Learning Representations (ICLR’2019),             tion. In Empirical Methods in Natural Language Process-
+  2019.                                                           ing (EMNLP), 2018c.
+Waibel, A., Hanazawa, T., and Hinton, G. Phoneme recog-         Zhou, D., Bousquet, O., Thomas, N. L., Weston, J., and
+ nition using time-delay neural networks. IEEE Transac-           Schölkopf, B. Learning with local and global consistency.
+ tions on Acoustics, Speech. and Signal Processing, 37(3),        In Thrun, S., Saul, L. K., and Schölkopf, B. (eds.), Ad-
+ 1989.                                                            vances in Neural Information Processing Systems 16, pp.
+                                                                  321–328. MIT Press, 2004.
+Wang, X., Ye, Y., and Gupta, A. Zero-shot recognition via
+ semantic embeddings and knowledge graphs. In Com-              Zhou, J., Cui, G., Zhang, Z., Yang, C., Liu, Z., and Sun,
+ puter Vision and Pattern Recognition (CVPR), pp. 6857–           M. Graph Neural Networks: A Review of Methods and
+ 6866. IEEE Computer Society, 2018.                               Applications. arXiv e-prints, 2018.
+Weston, J., Ratle, F., and Collobert, R. Deep learning via      Zhu, X., Ghahramani, Z., and Lafferty, J. Semi-supervised
+ semi-supervised embedding. In Proceedings of the 25th            learning using gaussian fields and harmonic functions.
+ International Conference on Machine Learning, ICML               In Proceedings of the Twentieth International Confer-
+ ’08, pp. 1168–1175, 2008.                                        ence on International Conference on Machine Learning,
+Wu, Z., Pan, S., Chen, F., Long, G., Zhang, C., and Yu, P. S.     ICML’03, pp. 912–919. AAAI Press, 2003.
+ A comprehensive survey on graph neural networks. arXiv
+ preprint arXiv:1901.00596, 2019.
+Xu, K., Hu, W., Leskovec, J., and Jegelka, S. How powerful
+  are graph neural networks? In International Conference
+  on Learning Representations (ICLR’2019), 2019.
+Yanardag, P. and Vishwanathan, S. Deep graph kernels.
+  In Proceedings of the 21th ACM SIGKDD International
+  Conference on Knowledge Discovery and Data Mining,
+  pp. 1365–1374. ACM, 2015.
+Yang, Z., Cohen, W. W., and Salakhutdinov, R. Revisit-
+  ing semi-supervised learning with graph embeddings. In
+  Proceedings of the 33rd International Conference on In-
+  ternational Conference on Machine Learning - Volume
+  48, ICML’16, pp. 40–48, 2016.
+Yao, L., Mao, C., and Luo, Y. Graph convolutional networks
+  for text classification. In Proceedings of the 33rd AAAI
+  Conference on Artificial Intelligence (AAAI’19), 2019.
+Zhang, J., Shi, X., Xie, J., Ma, H., King, I., and Yeung,
+  D. Gaan: Gated attention networks for learning on large
+  and spatiotemporal graphs. In Proceedings of the Thirty-
+  Fourth Conference on Uncertainty in Artificial Intelli-
+  gence (UAI’2018), pp. 339–349. AUAI Press, 2018a.
+Zhang, M., Cui, Z., Neumann, M., and Chen, Y. An end-
+  to-end deep learning architecture for graph classification.
+  2018b.
+Zhang, Y., Zhong, V., Chen, D., Angeli, G., and Manning,
+  C. D. Position-aware attention and supervised data im-
+  prove slot filling. In Proceedings of the 2017 Conference
+  on Empirical Methods in Natural Language Processing,
+  pp. 35–45. Association for Computational Linguistics,
+  2017.
+                                Simplifying Graph Convolutional Networks
+                                        (Supplementary Material)
+
+
+A. The spectrum of ˜
+                   ∆sym                                                                        ˜ sym . Likewise, 0 can be proved
+                                                                    from the non-negativity of ∆
+                                                                    to be the smallest eigenvalues of ∆sym .
+The normalized Laplacian defined on graphs with self-loops,
+∆˜ sym , consists of an instance of generalized graph Lapla-        Lemma 3. Let β1 ≤ β2 ≤ · · · ≤ βn denote eigenvalues of
+cians and hold the interpretation as a difference operator, i.e.    D−1/2 AD−1/2 and α1 ≤ α2 ≤ · · · ≤ αn be the eigenval-
+for any signal x ∈ Rn it satisfies                                  ues of D̃−1/2 AD̃−1/2 . Then,
+                                                        !
+                  X ãij             xi           xj                             maxi di                    mini di
+     ˜
+   (∆sym x)i =        √           √         −p             .            α1 ≥               β1 ,    αn ≤               .    (14)
+                        di + γ      di + γ       dj + γ                        γ + maxi di                γ + mini di
+                   j
+
+                                                                    Proof. We have shown that 0 is an eigenvalue of ∆sym .
+Here, we prove several properties regarding its spectrum.
+                                                                    Since D−1/2 AD−1/2 = I − ∆sym , then 1 is an eigenvalue
+Lemma 1. (Non-negativity of ∆   ˜ sym ) The augmented nor-
+                                                                    of D−1/2 AD−1/2 . More specifically, βn = 1. In addition,
+malized Laplacian matrix is symmetric positive semi-                by combining the fact that Tr(D−1/2 AD−1/2 ) = 0 =
+definite.                                                           P
+                                                                       i βi with βn = 1, we conclude that β1 < 0.
+
+                                          ˜ sym is
+Proof. The quadratic form associated with ∆                         By choosing x such that
+                                                                                        P kxk     = 1 and y = D1/2 D̃−1/2 x,
+                                                                                             di           mini di
+                                                                    we have that kyk =
+                                                                                    2
+                                                                                            di +γ xi and γ+mini di ≤ kyk ≤
+                                                                                                   2                    2
+               X            XX           ãij xi xj                                       i
+   ˜ sym x =
+x> ∆                x2i −           p                                 maxi di
+                                     (di + γ)(dj + γ)               γ+maxi di . Hence, we use the Rayleigh quotient to provide
+                i           i   j
+                                                                  a lower bound to α1 :
+   1 X 2 X 2 X X                             2ãij xi xj      
+                                                                                                  
+ =       xi +        xj −              p                            α1 = min    x> D̃−1/2 AD̃−1/2 x
+   2   i          j           i     j
+                                          (d i +  γ)(d  j + γ)          kxk=1
+                                                                                                  
+                                                                       = min y> D−1/2 AD−1/2 y (by replacing variable)
+   1 X X ãij x2i          X X ãij x2j                                   kxk=1
+ =                    +                                                                              
+   2   i  j
+               di + γ       j     i
+                                      dj + γ                                   y> D−1/2 AD−1/2 y     2
+                                                                      = min                     kyk
+                                                                        kxk=1        kyk2
+       XX            2ãij xi xj                                               > −1/2           
+     −         p                                                              y D      AD−1/2 y             
+                  (di +  γ)(d   j +   γ)                               ≥ min             2
+                                                                                                    max kyk2
+       i  j                                                             kxk=1        kyk           kxk=1
+                                               !2
+   1 XX               xi               xj                             (∵ min(AB) ≥ min(A) max(B) if min(A) < 0, ∀B > 0,
+ =         ãij √              −p                   ≥0       (13)                  > −1/2          
+   2 i j             di + γ           dj + γ                                       y D     AD−1/2 y
+                                                                       and   min                      = β1 < 0)
+                                                                            kxk=1       kyk2
+                                                                       = β1 max kyk2
+                                                                             kxk=1
+                                             ˜ sym .
+Lemma 2. 0 is an eigenvalue of both ∆sym and ∆                             maxi di
+                                                                       ≥             β1 .
+                                                                         γ + maxi di
+Proof. First, note that v = [1, . . . , 1]> is an eigenvector of
+∆ associated with eigenvalue 0, i.e., ∆v = (D − A)v = 0.
+Also, we have that ∆  ˜ sym = D̃−1/2 (D̃ − Ã)D̃−1/2 =              One may employ similar steps to prove the second inequality
+D̃ −1/2
+        ∆D̃ −1/2
+                 . Denote v1 = D̃1/2 v, then                        in Equation 14.
+  ˜ sym v1 = D̃−1/2 ∆D̃−1/2 D̃1/2 v = D̃−1/2 ∆v = 0.
+  ∆
+
+Therefore, v1 = D̃1/2 v is an eigenvector of ∆  ˜ sym associ-       Proof of Theorem 1. Note that ∆  ˜ sym = I − γ D̃−1 −
+ated with eigenvalue 0, which is then the smallest eigenvalue       D̃ −1/2
+                                                                            AD̃−1/2
+                                                                                    . Using the results in Lemma 3, we show
+                                             Simplifying Graph Convolutional Networks
+
+                                   ˜ sym is
+that the largest eigenvalue λ̃n of ∆                                 Text Classification. Yao et al. (2019) use one-hot features
+                                                                     for the word and document nodes. In training SGC, we nor-
+λ̃n = max x> (I − γ D̃−1 − D̃−1/2 AD̃−1/2 )x                         malize the features to be between 0 and 1 after propagation
+       kxk=1
+                                                                     and train with L-BFGS for 3 steps. We tune the only hy-
+    ≤ 1 − min γx> D̃−1 x − min x> D̃−1/2 AD̃−1/2 x                   perparameter, weight decay, using hyperopt(Bergstra et al.,
+            kxk=1                  kxk=1
+                                                                     2015) for 60 iterations. Note that we cannot apply this fea-
+                γ
+    =1−               − α1                                           ture normalization for TextGCN because the propagation
+          γ + maxi di                                                cannot be precomputed.
+                γ         maxi di
+    ≤1−               −             β1
+          γ + maxi di   γ + maxi di                                  Semi-supervised User Geolocation. We replace the 4-
+             maxi di                                                 layer, highway-connection GCN with a 3rd degree propa-
+    <1−               β1 (γ > 0 and β1 < 0)
+          γ + maxi di                                                gation matrix (K = 3) SGC and use the same set of hy-
+    < 1 − β 1 = λn                                           (15)    perparameters as Rahimi et al. (2018). All experiments on
+                                                                     the GEOTEXT dataset are conducted on a single Nvidia
+                                                                     GTX-1080Ti GPU while the ones on the TWITTER-NA
+                                                                     and TWITTER-WORLD datasets are excuded with 10 cores
+                                                                     of the Intel(R) Xeon(R) Silver 4114 CPU (2.20GHz). In-
+B. Experiment Details                                                stead of collapsing all linear transformations, we keep two
+                                                                     of them which we find performing slightly better possibly
+Node Classification. We empirically find that on Reddit              due to . Despite of this subtle variation, the model is still
+dataset for SGC, it is crucial to normalize the features into        linear.
+zero mean and univariate.
+                                                                     Relation Extraction. We replace the 2-layer GCN with a
+Training Time Benchmarking. We hereby describe the                   2nd degree propagation matrix (K = 2) SGC and remove
+experiment setup of Figure 3. Chen et al. (2018) benchmark           the intermediate dropout. We keep other hyperparameters
+the training time of FastGCN on CPU, and as a result, it is          unchanged, including learning rate and regularization. Sim-
+difficult to compare numerical values across reports. More-          ilar to Zhang et al. (2018c), we report the best validation
+over, we found the performance of FastGCN improved with              accuracy with early stopping.
+a smaller early stopping window (10 epochs); therefore, we
+could decrease the model’s training time. We provide the             Zero-shot Image Classification. We replace the 6-layer
+data underpinning Figure 3 in Table 8 and Table 9.                   GCN (hidden size: 2048, 2048, 1024, 1024, 512, 2048)
+                                                                     baseline with an 6-layer MLP (hidden size: 512, 512, 512,
+                                                                     1024, 1024, 2048) followed by a SGC with K = 6. Follow-
+Table 8. Training time (seconds) of graph neural networks on Cita-   ing (Wang et al., 2018), we only apply dropout to the output
+tion Networks. Numbers are averaged over 10 runs.                    of SGC. Due to the slow evaluation of this task, we do
+           Models        Cora    Citeseer     Pubmed                 not tune the dropout rate or other hyperparameters. Rather,
+           GCN          0.49        0.59        8.31                 we follow the GCNZ code and use learning rate of 0.001,
+           GAT          63.10     118.10      121.74                 weight decay of 0.0005, and dropout rate of 0.5. We also
+           FastGCN      2.47        3.96        1.77                 train the models with ADAM (Kingma & Ba, 2015) for 300
+           GIN          2.09        4.47       26.15
+           LNet         15.02      49.16      266.47
+                                                                     epochs.
+           AdaLNet      10.15      31.80      222.21
+           DGI          21.24      21.06       76.20                 C. Additional Experiments
+           SGC          0.13        0.14        0.29
+                                                                     Random Splits for Citation Networks. Possibly due to
+                                                                     their limited size, the citation networks are known to be
+                                                                     unstable. Accordingly, we conduct an additional 10 experi-
+       Table 9. Training time (seconds) on Reddit dataset.           ments on random splits of the training set while maintaining
+                    Model           Time(s) ↓                        the same validation and test sets.
+                    SAGE-mean       78.54
+                    SAGE-LSTM       486.53                           Propagation choice. We conduct an ablation study with
+                    SAGE-GCN        86.86                            different choices of propagation matrix, namely:
+                    FastGCN         270.45
+                    SGC             2.70                                  Normalized Adjacency: Sadj = D−1/2 AD−1/2
+                                                                          Random Walk Adjacency Srw = D−1 A
+                                                                            Simplifying Graph Convolutional Networks
+
+                                                      Cora                                      Citeseer                                 Pubmed
+                                                                            0.750                                     0.82
+
+
+
+
+        Validation Accuracy
+                                                                                                                                                                    Sadj
+                                                                            0.725                                                                                   S̃adj
+                              0.80                                                                                    0.80
+                                                                                                                                                                    Srw
+                                                                            0.700
+                                                                                                                                                                    S̃rw
+                                                                                                                      0.78
+                              0.78                                          0.675                                                                                   S1-order
+
+                                      2   3   4   5    6     7   8   9 10           2   3   4   5 6 7      8   9 10          2   3   4    5   6   7   8   9 10
+                                                                                                 Degree
+
+
+
+                                                        Figure 4. Validation accuracy with SGC using different propagation matrices.
+
+
+                                                                                                           of K does not degrade the performance of augmented propa-
+Table 10. Test accuracy (%) on citation networks (random splits).
+†                                                                                                          gation matrices. For non-augmented propagation matrices —
+  We remove the outliers (accuracy < 0.7/0.65/0.75) when calcu-
+lating their statistics due to high variance.                                                              where the largest eigenvalue is approximately 2 — negative
+                                                                                                           coefficients significantly distort the signal, which leads to
+                                          Cora                   Citeseer               Pubmed
+                                                                                                           decreased accuracy. Therefore, adding self-loops constructs
+ Ours:                                                                                                     a better domain in which fixed filters can operate.
+ GCN                                 80.53 ± 1.40            70.67 ± 2.90           77.09 ± 2.95
+ GIN                                 76.94 ± 1.24            66.56 ± 2.27           74.46 ± 2.19
+ LNet                                74.23 ± 4.50†           67.26 ± 0.81†          77.20 ± 2.03†                       # Training Samples                SGC     GCN
+ AdaLNet                             72.68 ± 1.45†           71.04 ± 0.95†          77.53 ± 1.76†                                    1                    33.16   32.94
+ GAT                                 82.29 ± 1.16             72.6 ± 0.58           78.79 ± 1.41
+ SGC                                 80.62 ± 1.21            71.40 ± 3.92           77.02 ± 1.62                                     5                    63.74   60.68
+                                                                                                                                     10                   72.04   71.46
+                                                                                                                                     20                   80.30   80.16
+     Aug. Normalized Adjacency S̃adj = D̃−1/2 ÃD̃−1/2                                                                               40                   85.56   85.38
+                                                                                                                                     80                   90.08   90.44
+     Aug. Random Walk S̃rw = D̃−1 Ã
+                                                                                                           Table 11. Validation Accuracy (%) when SGC and GCN are trained
+     First-Order Cheby S1-order = (I + D−1/2 AD−1/2 )                                                      with different amounts of data on Cora. The validation accuracy is
+                                                                                                           averaged over 10 random training splits such that each class has
+We investigate the effect of propagation steps K ∈ {2..10}                                                 the same number of training examples.
+on validation set accuracy. We use hyperopt to tune
+L2-regularization and leave all other hyperparameters un-                                                  Data amount. We also investigated the effect of training
+changed. Figure 4 depicts the validation results achieved by                                               dataset size on accuracy. As demonstrated in Table 11,
+varying the degree of different propagation matrices.                                                      SGC continues to perform similarly to GCN as the training
+We see that augmented propagation matrices (i.e. those                                                     dataset size is reduced, and even outperforms GCN when
+with self-loops) attain higher accuracy and more stable per-                                               there are fewer than 5 training samples. We reason this study
+formance across various propagation depths. Specifically,                                                  demonstrates SGC has at least the same modeling capacity
+the accuracy of S1-order tends to deteriorate as the power K                                               as GCN.
+increases, and this results suggests using large filter coef-
+ficients on low frequencies degrades SGC performance on
+semi-supervised tasks.
+Another pattern is that odd powers of K cause a significant
+performance drop for the normalized adjacency and random
+walk propagation matrices. This demonstrates how odd pow-
+ers of the un-augmented propagation matrix use negative
+filter coefficients on high frequency information. Adding
+self-loops to the propagation matrix shrinks the spectrum
+such that the largest eigenvalues decrease from ≈ 2 to ≈ 1.5
+on the citation network datasets. By effectively shrinking
+the spectrum, the effect of negative filter coefficients on high
+frequencies is minimized, and as a result, using odd-powers
+

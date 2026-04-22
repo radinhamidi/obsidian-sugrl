@@ -244,3 +244,11 @@ Added geometric-framing subsection to [[Oversmoothing]] citing Ji et al.'s simpl
 
 - Ingest section rewritten: explicit method-page-vs-source-page split (entities/ for methods like BGRL/PolyGCL/BLNN; sources/ for benchmarks/position/onboarding); added `pdftotext -layout` step; added post-ingest audit step pointing to the Audit-discipline section.
 - New "Inter-agent protocol alignment" subsection: when an inquiry locks a protocol decision, propagate to every dependent page and grep for stale values before closing. Reference example: INQ-2026-04-21-001's 5-trial lock propagated to Ablation Plan + Matched-Seed Delta.
+
+## [2026-04-21] lint | Entity audit completed: GPRGNN + SGC
+
+Final entities audited against PDFs:
+- [[GPRGNN]]: all mechanism/numbers/theoretical claims verified (APPNP/SGC special-case equivalences exact, K=10/hidden 64, 10-dataset coverage, Cora/Texas Fig 1 weight patterns, 95% CI reporting). Fixed Pan Li affiliation: Purdue, not UIUC.
+- [[SGC]]: all mechanism/numbers verified (Cora 81.0 ± 0.0, CiteSeer 71.9 ± 0.1, PubMed 78.9 ± 0.0, Reddit 94.9, 2 L-BFGS steps on Reddit, 28× speedup on Pubmed from Fig 3). Fixed ogbn-arxiv reproduction number: 66.92 ± 0.08 (exact, per GraphMAE2 Table 3), not 66.9. Also tightened BGRL comparison to its canonical 71.64.
+
+All entity pages in the wiki now traced line-by-line to source PDFs. No outstanding fabrication risk in the baseline/prior-art coverage.

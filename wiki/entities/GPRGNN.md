@@ -11,7 +11,7 @@ updated: 2026-04-21
 
 # GPR-GNN — Generalized PageRank Graph Neural Network
 
-Chien, Peng, Li, Milenkovic (UIUC). ICLR 2021. **Critical prior art for AD-SSL** — the closest published antecedent of our multi-depth learnable mixture.
+Chien, Peng, Milenkovic (UIUC) + Li (Purdue). ICLR 2021. **Critical prior art for AD-SSL** — the closest published antecedent of our multi-depth learnable mixture.
 
 ## Mechanism (exact, Eq. 1)
 
