@@ -255,3 +255,6 @@ All entity pages in the wiki now traced line-by-line to source PDFs. No outstand
 
 ## [2026-04-22] inquiry response | INQ-2026-04-22-001 B0 collapse
 Picked Option B (InfoNCE as B0). Demanded three diagnostics from CA: per-depth inference (Z_k alone vs mean), per-depth collapse stats (embedding_std by k), InfoNCE τ sweep on Cora. Replaced Cora ≥82 gate with "B0 ≥ parameter-free Â¹X baseline per dataset" — right bar for a minimal baseline. Reframed Cora as report-for-convention, not headline dataset; Pareto story lives on Photo/Computers/ogbn-arxiv/ogbn-products. Wiki updates (AD-SSL loss field, Thesis loss framing, Ablation Plan B0 row, Novelty Checklist) to follow in a separate pass once CA results come in.
+
+## [2026-04-22] propagate | INQ-2026-04-22-001 B0 = InfoNCE
+Propagated B0 loss swap across wiki: [[AD-SSL]] entity (mechanism step 3 + one-line), [[Thesis]] (mechanism step 3 + B0 definition + negatives note), [[Ablation Plan - AD-SSL B0 A1-A4]] (B0 row + A3 re-scoped to bootstrap comparison), [[Novelty Verification Checklist]] (Claim 2 reframed to contrastive; old bootstrap-vs-BCE ablation now InfoNCE-vs-BCE). Added "Baseline gate — training adds value over not training" section to [[Splits and Protocol]] replacing old ≥82 Cora gate with per-dataset Â¹X linear-probe floor. All changes marked provisional pending CA's three diagnostics.

@@ -28,14 +28,17 @@ Every claim in the AD-SSL paper that a reviewer can attack with "prior X already
 | 🟡 | **Uniform α** (α_{i,k} = 1/K) | Isolates "any weighting" from "learned weighting" | Learned > uniform |
 | 🟢 | **Per-node α heatmap** on a heterogeneous graph | Qualitative figure: nodes near boundaries prefer small k, deep-community nodes prefer large k | Visually interpretable pattern |
 
-## Claim 2 — Bootstrap across depth pairs is a valid SSL signal without augmentation
+## Claim 2 — Contrastive SSL across depth pairs is a valid signal without augmentation
+
+**Reframed 2026-04-22** (see [[INQ-2026-04-22-001]]): base loss is **InfoNCE** across depth pairs after B0-strict bootstrap collapsed. The claim is now "multi-depth views + contrastive loss = no augmentation needed," not "multi-depth views + bootstrap = no negatives needed." Bootstrap becomes an A3-style optional variant. The novelty story (adaptive-depth + decoupled) is unaffected.
 
 **Threatened by**: [[BGRL]] (BYOL on augmented views), [[GraphACL]] (asymmetric + uniformity, two-hop monophily), [[PolyGCL]] (DGI-BCE on two spectral views), [[GGD]] (binary discriminator).
 
 | 🔴 | Ablation | Experimental form | Passes if |
 |---|---|---|---|
-| 🔴 | **Remove bootstrap** (substitute BGRL-style augmentation pair on single depth) | Fix depths, swap loss | AD-SSL ≥ BGRL-on-precomputed; more importantly, no collapse |
-| 🔴 | **Swap bootstrap for DGI-BCE** (PolyGCL's loss) on same K depth views | Isolates bootstrap-vs-BCE | Bootstrap ≥ BCE OR provides a cost argument (BCE needs negatives) |
+| 🔴 | **Swap InfoNCE for bootstrap + predictor + augmentation** (BGRL-style on single depth) | Fix depths, swap loss | AD-SSL-InfoNCE ≥ BGRL-on-precomputed at lower cost (no per-epoch augmentation) |
+| 🔴 | **Swap InfoNCE for bootstrap on same K depth views** (bootstrap + predictor, no augmentation) | Was the §6-strict B0; confirms collapse still happens with K>1 depth views | Documents collapse-without-negatives; supports claim that contrastive is the minimal working loss |
+| 🔴 | **Swap InfoNCE for DGI-BCE** on same K depth views | Isolates InfoNCE-vs-BCE choice | InfoNCE ≥ BCE OR cost argument |
 | 🟡 | **Single depth + bootstrap** (K=1) | Isolates "multi-depth" from "bootstrap" | Multi-depth > K=1 |
 | 🟡 | **Collapse check** — monitor `‖z_L − z_H‖` or representation rank over training | Standard BYOL diagnostic | No rank collapse, no constant embeddings |
 

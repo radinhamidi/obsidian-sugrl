@@ -21,11 +21,11 @@ AD-SSL matches the accuracy of expensive unsupervised graph SSL methods (e.g. [[
 
 1. **Pre-compute** `X_k = Â^k X` for k ∈ {1, 2, 4, 8}. One-time sparse matmul. Inherits the decoupled precompute trick from [[SGC]]. See [[Decoupled Precompute]].
 2. **Shared MLP encoder** maps each X_k → Z_k. Same weights across all depths.
-3. **Bootstrap loss** (BYOL-style, online vs EMA target) aligns Z_k with Z_{k'} across depth pairs. See [[Bootstrap Loss]].
+3. **Base loss: InfoNCE across depth pairs** (locked 2026-04-22 via [[INQ-2026-04-22-001]], provisional pending diagnostics). The paper's novelty is the **adaptive-depth + decoupled-precompute** story; the loss is orthogonal. Bootstrap cosine (initial plan) collapsed empirically without negatives or augmentation — multi-depth views alone don't break symmetry for a pure bootstrap objective. InfoNCE's in-batch negatives fix this. Bootstrap is retained as an A-series ablation. See [[Bootstrap Loss]] for the alternative framing.
 4. **Per-node adaptive depth weighting** via group-relative ranking: for each node, each depth is scored by how well it aligns with the consensus of the other depths; softmax gives weights. See [[Multi-Depth Views]] and [[Adaptive Depth Weighting]].
 5. **Inference:** Z_final = weighted average of Z_k.
 
-No augmentation, no negatives, no GNN forward pass during training. Per-epoch cost `O(N·d²)`.
+No augmentation, no GNN forward pass during training. Negatives come from the InfoNCE batch (in-batch nodes), not from an explicit graph-structural sampler. Per-epoch cost `O(N·d²)`.
 
 ## Why this is novel
 
@@ -43,7 +43,7 @@ From [[Preliminary Validation - 168 Runs]]: six SUGRL-style sampling tweaks fail
 
 Internal naming (does **not** go in paper). The "GRPO / KTO / SimPO / Online-DPO" tags are **RL-alignment analogies used during brainstorming** to import structural patterns (group-relative ranking, binary preference, simplified objective, iterative EMA preference) into graph SSL. The graph mechanism stands on its own — the analogy is scaffolding only.
 
-Baseline **B0** = uniform depth weights, bootstrap cosine loss, no refinement. See [[Ablation Plan - AD-SSL B0 A1-A4]].
+Baseline **B0** = uniform depth weights, **InfoNCE across depth pairs** (2026-04-22 update; bootstrap cosine collapsed in CA's §6-strict trial — see [[INQ-2026-04-22-001]]), no refinement. See [[Ablation Plan - AD-SSL B0 A1-A4]].
 
 | Insight | Brainstorm tag (RL analogy) | What it does in AD-SSL | Maps to [[Novelty Verification Checklist]] |
 |---|---|---|---|

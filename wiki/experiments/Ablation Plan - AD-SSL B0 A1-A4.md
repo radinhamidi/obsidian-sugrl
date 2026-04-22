@@ -16,12 +16,14 @@ Phase 2 experiment, currently **not started** (awaiting Phase 0 hygiene + Phase 
 
 | Config | Weighting | Loss | Refinement |
 |---|---|---|---|
-| **B0** | uniform across depths | bootstrap cosine | none |
-| **A1** (GRPO-style) | per-node cross-depth consistency | bootstrap cosine | none |
+| **B0** | uniform across depths | **InfoNCE across depth pairs** | none |
+| **A1** (GRPO-style) | per-node cross-depth consistency | InfoNCE | none |
 | **A2** (KTO-style) | uniform | asymmetric (kNN↔graph-nbrs signal) | none |
-| **A3** (SimPO-style) | uniform | MSE or InfoNCE (sweep) | none |
-| **A4** (Online-DPO-style) | EMA-smoothed depth preferences | bootstrap cosine | iterative |
+| **A3** (SimPO-style) | uniform | **bootstrap cosine (BYOL-style) or MSE** — is InfoNCE in B0 load-bearing, or does a simpler / bootstrap loss match it? | none |
+| **A4** (Online-DPO-style) | EMA-smoothed depth preferences | InfoNCE | iterative |
 | A1+A3, A1+A4, ... | combos | — | — |
+
+**Loss change — 2026-04-22.** B0's loss was originally `bootstrap cosine`. CA's strict implementation of §6 collapsed (Cora 49%, Computers 37.5% majority-class); bootstrap with EMA target but **no predictor / no augmentation / no negatives** has no symmetry-breaker, and multi-depth views alone are not strong enough. Swapped to **InfoNCE** via [[INQ-2026-04-22-001]] — in-batch negatives provide the collapse-prevention mechanism without augmentation. A3 now carries the "bootstrap vs InfoNCE" comparison that was previously buried. Provisional pending three diagnostics (per-depth inference, per-depth embedding_std, InfoNCE τ sweep on Cora) — may revert if the encoder is fundamentally not learning rather than being dragged down by mean-pooling.
 
 Internal names are internal. See [[Thesis]] §"Four insights". Do not surface in paper.
 

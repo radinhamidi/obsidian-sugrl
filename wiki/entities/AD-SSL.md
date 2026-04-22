@@ -13,17 +13,17 @@ Our proposed method for NeurIPS 2026. See [[Thesis]] for the full pitch.
 
 ## One line
 
-Multi-depth precomputed node features as contrastive views + per-node adaptive depth weighting + BYOL-style bootstrap loss, trained by a shared MLP encoder — matching [[BGRL]] accuracy at [[GGD]] cost.
+Multi-depth precomputed node features as contrastive views + per-node adaptive depth weighting + InfoNCE across depth pairs, trained by a shared MLP encoder — matching [[BGRL]] accuracy at [[GGD]] cost.
 
 ## Architecture
 
 1. Pre-compute `X_k = Â^k X` for k ∈ {1, 2, 4, 8}. See [[Decoupled Precompute]].
 2. Shared MLP encoder: X_k → Z_k.
-3. [[Bootstrap Loss]] aligns online Z_k with EMA-target Z_{k'} across depth pairs.
+3. **Base loss: InfoNCE across depth pairs** (provisional, locked 2026-04-22 via [[INQ-2026-04-22-001]] pending diagnostics). Bootstrap cosine with EMA target collapsed empirically without negatives or augmentation; InfoNCE's in-batch negatives provide the symmetry-breaking that multi-depth views alone cannot. Bootstrap moves to an A-series ablation ([[Bootstrap Loss]] kept as a reference page, not B0's loss).
 4. Per-node group-relative weighting (see [[Adaptive Depth Weighting]], [[Multi-Depth Views]]).
 5. Inference: Z_final = Σ_k α_k · Z_k.
 
-No augmentation. No negatives. No GNN forward pass during training.
+No augmentation. No GNN forward pass during training. **Negatives come from the InfoNCE batch**; they are not graph-structural negatives like in SUGRL.
 
 ## Components
 

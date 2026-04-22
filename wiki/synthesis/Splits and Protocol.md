@@ -45,6 +45,23 @@ Checkpoint selection via val-labels is a weak form of label leakage into SSL pre
 - If the gap > 0.3 pts, drop early stopping and move to fixed-budget pretraining (BGRL/GraphMAE style). Open a follow-up inquiry in that case.
 - Never peek at test labels during pretraining or hyperparameter selection.
 
+## Baseline gate — "training adds value over not training"
+
+**Updated 2026-04-22 via [[INQ-2026-04-22-001]].** Replaces the previous absolute "≥82 on Cora" gate, which compared B0 to SUGRL's fully-trained accuracy — the wrong bar for a minimal baseline.
+
+For every benchmark dataset, report the **parameter-free Â¹X linear-probe accuracy** (propagate raw features once with normalized adjacency, train LogReg on the train split, score on test). Call this the *Â¹X baseline*.
+
+**B0 must clear its Â¹X baseline per dataset.** This is the minimum bar for "our trained encoder is not destructive." Absolute accuracy gates (SUGRL-matching) apply to the **final method** (B0 + best A-combination), not B0 alone.
+
+Known values to date (from CA runs under [[INQ-2026-04-22-001]]):
+
+| Dataset | Â¹X baseline | B0 (InfoNCE) | Status |
+|---|---:|---:|---|
+| Cora | 77.07 | 72.01 ± 1.66 | **below baseline** — diagnostics pending (per-depth inference, collapse stats, τ sweep) |
+| Computers | (run and record) | 83.69 ± 0.16 | likely passes once Â¹X is recorded; final gate depends on baseline value |
+
+If B0 under InfoNCE cannot clear the Â¹X baseline on a dataset after the diagnostic pass, that dataset becomes a scope-question (report-for-convention vs move to appendix vs exclude). See [[Thesis]] § Scope.
+
 ## Seed counts and reporting
 
 All datasets: **5 trials**, report mean ± 95 % CI (bootstrap).
@@ -64,7 +81,8 @@ All datasets: **5 trials**, report mean ± 95 % CI (bootstrap).
 
 ## Related
 
-- [[INQ-2026-04-21-001]] — the inquiry that locked this.
+- [[INQ-2026-04-21-001]] — the inquiry that locked splits + early stopping.
+- [[INQ-2026-04-22-001]] — B0 loss swap + Â¹X baseline-gate policy.
 - [[Ablation Plan - AD-SSL B0 A1-A4]] — consumes this protocol.
 - [[Matched-Seed Delta]] — significance criterion.
 - [[Graph Learning Poor Benchmarks]] — CI + paired-test calibration.
