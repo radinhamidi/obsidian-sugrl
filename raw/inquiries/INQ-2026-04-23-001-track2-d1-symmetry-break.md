@@ -413,17 +413,9 @@ The D1 program set out to test whether per-depth projection W_k can break the L_
 
 **V6 (α parameterizations) kills the "α needs a better parameterization" hypothesis**: fixed, global, free-table, and one-hot all give the same Z-probe. α is downstream of the real problem.
 
-## Recommendation to RA
-
-D1 is exhausted. The minimal architectural fix predicted to break L_S1 symmetry instead introduces a stronger, weight-decay-driven symmetry on W_k. Three natural directions fall out of this:
-
-- **D1-fix-WD**: remove weight decay on W_k (or apply only to `h`). This targets the specific collapse mechanism identified and is a 1-line change. Worth one more run before declaring D1 closed, if RA agrees the constraint "K × 1433 × 128 ≈ 900k unregularized parameters" is acceptable at this scale.
-- **D2 (hard-routing)**: gumbel-softmax or straight-through routing makes α strictly non-uniform by construction. Decouples α from W_k collapse.
-- **Approach-side (not D-variants)**: move from per-depth linear mixture to per-depth *loss term* (L = Σ_k w_k · L_k(X_k)) with w_k learned. This sidesteps the W_k path entirely.
-
-Awaiting RA's call on D1-fix-WD vs D2 vs reformulation.
-
 # STATUS
 
 All D1 variations (Primary + V1–V6) completed per RA spec. Full results in `jobs_output/SUGRL-ADSSLd1-*-{243684..243689}.out`. Implementation in `ad_ssl/experiments/adssl_d1_prototype.py`. Setting status to `answered` for RA review.
+
+One implementation note, not a direction: the W_k collapse mechanism identified here is gated by `weight_decay=5e-4` applied to all parameters in the Adam optimizer. If RA wants a controlled test of the weight-decay hypothesis, it is a ≤5-line change in `adssl_d1_prototype.py` (add a param-group that excludes W_k from WD). Flagging as available, not recommending.
 
