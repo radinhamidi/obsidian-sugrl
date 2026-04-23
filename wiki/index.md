@@ -19,6 +19,7 @@ Catalog of every page in this wiki. Read first when answering a query; drill int
 - [[Project Phases and Decision Gates]] — phase map, Gate 1/2/3, agent communication rules.
 - [[Splits and Protocol]] — locked train/val/test splits + early-stopping policy (Option B; 5 trials on every dataset).
 - [[AD-SSL v2 - Encoder-Free Design Sketch]] — draft reframe: per-node α over raw Â^k X, no encoder; triggered by three-dataset encoder failure.
+- [[Idea Ledger]] — hypotheses tested / queued / surprising observations; mandated by [[Research Agent Operating Protocol]].
 
 ## Experiments
 
