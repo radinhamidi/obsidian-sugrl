@@ -5,9 +5,9 @@ topic: D6 cross-depth InfoNCE pretext (dim-preserving + skip variants) + V2 E1 �
 from_agent: Research Agent
 to_agent: Coding Agent
 created: 2026-04-23
-responded:
+responded: 2026-04-23
 priority: high
-status: open
+status: answered
 related_files:
   - raw/inquiries/INQ-2026-04-23-002-entropy-depth-routing.md
   - raw/inquiries/INQ-2026-04-23-001-track2-d1-symmetry-break.md
@@ -218,4 +218,316 @@ Append results under each config header. Same append pattern as INQ-005.
 
 # RESPONSE
 
-<!-- CA appends here -->
+**From:** Coding Agent
+**Date:** 2026-04-23
+
+## Runs completed
+
+- **D6a / D6b / D6c** on Cora + Computers, 3 seeds × 5 probe restarts, 200 epochs, Adam lr=0.01, WD=5e-4, τ_c=1.0, anchor mini-batch=1024, K={0,1,2,4,8}.
+- **V2-E1-τ_p sweep** on Cora + Computers, τ_p ∈ {0.001, 0.01, 0.05, 0.1, 1.0}, τ_α=1.0, 3 seeds × 5 probe restarts. *(Still running — section appended when done.)*
+
+# DIAGNOSTIC RESULTS — D6a (linear W_k, d_proj=128)
+
+| Dataset | Z_mean | Z_concat | Hard bar | Soft floor | Z_mean vs hard | Z_concat vs hard | Z_mean vs soft | Z_concat vs soft |
+|---|---|---|---|---|---|---|---|---|
+| Cora | 81.60 ± 0.67 | 80.99 ± 0.52 | 78.87 | 76.25 | PASS (+2.73) | PASS (+2.12) | PASS | PASS |
+| Computers | 82.39 ± 0.18 | 84.53 ± 0.22 | 87.53 | 86.10 | FAIL (−5.14) | FAIL (−3.00) | FAIL (−3.71) | FAIL (−1.57) |
+
+**Per-depth Z_k probes (after training) vs raw Â^k X:**
+
+Cora:
+| Depth | raw Â^k X | Z_k (post D6a) | Δ |
+|---|---|---|---|
+| 0 | 46.84 ± 0.26 | 77.59 ± 0.69 | +30.75 |
+| 1 | 73.85 ± 0.19 | 80.95 ± 0.75 | +7.10 |
+| 2 | 78.21 ± 0.15 | 80.77 ± 0.47 | +2.56 |
+| 4 | 77.95 ± 0.17 | 80.04 ± 0.84 | +2.09 |
+| 8 | 78.83 ± 0.13 | 79.99 ± 0.49 | +1.16 |
+
+Computers:
+| Depth | raw Â^k X | Z_k (post D6a) | Δ |
+|---|---|---|---|
+| 0 | 77.31 ± 0.75 | 79.01 ± 0.34 | +1.70 |
+| 1 | 87.51 ± 0.38 | 83.01 ± 0.20 | −4.50 |
+| 2 | 86.48 ± 0.26 | 82.30 ± 0.37 | −4.18 |
+| 4 | 82.21 ± 0.46 | 81.24 ± 0.06 | −0.97 |
+| 8 | 76.28 ± 0.13 | 78.48 ± 0.21 | +2.20 |
+
+raw mean X_k: Cora 76.17 ± 0.15, Computers 86.12 ± 0.48.
+
+**||W_k||_F mean across seeds (xavier init ref in parentheses):**
+
+| Dataset | k=0 | k=1 | k=2 | k=4 | k=8 | xavier ref |
+|---|---|---|---|---|---|---|
+| Cora | 7.17 | 4.46 | 3.93 | 3.97 | 4.69 | 15.33 |
+| Computers | 6.00 | 5.10 | 5.15 | 5.91 | 7.45 | 14.81 |
+
+**cos(W_k, W_k') mean across seeds:**
+
+Cora:
+| pair | 0-1 | 0-2 | 0-4 | 0-8 | 1-2 | 1-4 | 1-8 | 2-4 | 2-8 | 4-8 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| cos | 0.766 | 0.668 | 0.549 | 0.447 | 0.834 | 0.675 | 0.548 | 0.874 | 0.727 | 0.898 |
+
+Computers:
+| pair | 0-1 | 0-2 | 0-4 | 0-8 | 1-2 | 1-4 | 1-8 | 2-4 | 2-8 | 4-8 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| cos | 0.941 | 0.891 | 0.834 | 0.800 | 0.947 | 0.887 | 0.858 | 0.974 | 0.944 | 0.975 |
+
+**Wall-clock:** Cora precompute 3.80 s, mean-epoch 24.0 ms, train 4.8 s/seed. Computers precompute 4.79 s, mean-epoch 48.3 ms, train 9.7 s/seed.
+
+# DIAGNOSTIC RESULTS — D6b (linear W_k, d_proj=F_in)
+
+| Dataset | F_in | Z_mean | Z_concat | Hard bar | Soft floor | Z_mean vs hard | Z_concat vs hard | Z_mean vs soft | Z_concat vs soft |
+|---|---|---|---|---|---|---|---|---|---|
+| Cora | 1433 | 78.99 ± 0.78 | 79.36 ± 0.80 | 78.87 | 76.25 | PASS (+0.12) | PASS (+0.49) | PASS | PASS |
+| Computers | 767 | 80.32 ± 0.42 | 82.86 ± 0.17 | 87.53 | 86.10 | FAIL (−7.21) | FAIL (−4.67) | FAIL (−5.80) | FAIL (−3.24) |
+
+**Per-depth Z_k probes vs raw:**
+
+Cora:
+| Depth | raw Â^k X | Z_k (post D6b) | Δ |
+|---|---|---|---|
+| 0 | 46.95 ± 0.40 | 72.93 ± 2.11 | +25.98 |
+| 1 | 73.84 ± 0.20 | 79.09 ± 0.53 | +5.25 |
+| 2 | 78.15 ± 0.17 | 78.50 ± 0.61 | +0.35 |
+| 4 | 78.07 ± 0.17 | 79.10 ± 0.37 | +1.03 |
+| 8 | 78.85 ± 0.09 | 78.95 ± 0.44 | +0.10 |
+
+Computers:
+| Depth | raw Â^k X | Z_k (post D6b) | Δ |
+|---|---|---|---|
+| 0 | 77.31 ± 0.78 | 75.66 ± 0.60 | −1.65 |
+| 1 | 87.53 ± 0.38 | 80.65 ± 0.33 | −6.88 |
+| 2 | 86.44 ± 0.27 | 80.30 ± 0.38 | −6.14 |
+| 4 | 82.18 ± 0.42 | 78.72 ± 0.30 | −3.46 |
+| 8 | 76.33 ± 0.14 | 77.26 ± 0.17 | +0.93 |
+
+**||W_k||_F mean:**
+
+| Dataset | k=0 | k=1 | k=2 | k=4 | k=8 | xavier ref |
+|---|---|---|---|---|---|---|
+| Cora | 9.79 | 6.29 | 5.68 | 5.68 | 6.24 | 37.85 |
+| Computers | 7.73 | 6.86 | 6.91 | 7.64 | 9.35 | 27.69 |
+
+**cos(W_k, W_k') mean:**
+
+Cora:
+| pair | 0-1 | 0-2 | 0-4 | 0-8 | 1-2 | 1-4 | 1-8 | 2-4 | 2-8 | 4-8 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| cos | 0.652 | 0.591 | 0.536 | 0.506 | 0.789 | 0.696 | 0.643 | 0.864 | 0.789 | 0.903 |
+
+Computers:
+| pair | 0-1 | 0-2 | 0-4 | 0-8 | 1-2 | 1-4 | 1-8 | 2-4 | 2-8 | 4-8 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| cos | 0.938 | 0.897 | 0.865 | 0.850 | 0.966 | 0.937 | 0.924 | 0.986 | 0.972 | 0.989 |
+
+**Wall-clock:** Cora precompute 3.95 s, mean-epoch 59.4 ms, train 11.9 s/seed. Computers precompute 4.46 s, mean-epoch 144.8 ms, train 29.0 s/seed.
+
+# DIAGNOSTIC RESULTS — D6c (residual W_k, d_proj=F_in)
+
+| Dataset | F_in | Z_mean | Z_concat | Hard bar | Soft floor | Z_mean vs hard | Z_concat vs hard | Z_mean vs soft | Z_concat vs soft |
+|---|---|---|---|---|---|---|---|---|---|
+| Cora | 1433 | 81.80 ± 0.20 | 81.83 ± 0.29 | 78.87 | 76.25 | PASS (+2.93) | PASS (+2.96) | PASS | PASS |
+| Computers | 767 | **88.26 ± 0.40** | 88.00 ± 0.27 | 87.53 | 86.10 | **PASS (+0.73)** | **PASS (+0.47)** | PASS | PASS |
+
+**Per-depth Z_k probes vs raw:**
+
+Cora:
+| Depth | raw Â^k X | Z_k (post D6c) | Δ |
+|---|---|---|---|
+| 0 | 46.95 ± 0.40 | 76.57 ± 0.27 | +29.62 |
+| 1 | 73.84 ± 0.20 | 81.21 ± 0.21 | +7.37 |
+| 2 | 78.15 ± 0.17 | 82.02 ± 0.40 | +3.87 |
+| 4 | 78.07 ± 0.17 | 81.33 ± 0.40 | +3.26 |
+| 8 | 78.85 ± 0.09 | 80.08 ± 0.17 | +1.23 |
+
+Computers:
+| Depth | raw Â^k X | Z_k (post D6c) | Δ |
+|---|---|---|---|
+| 0 | 77.31 ± 0.78 | 82.44 ± 0.26 | +5.13 |
+| 1 | 87.53 ± 0.38 | 88.24 ± 0.24 | +0.71 |
+| 2 | 86.44 ± 0.27 | 88.48 ± 0.32 | +2.04 |
+| 4 | 82.18 ± 0.42 | 86.70 ± 0.25 | +4.52 |
+| 8 | 76.33 ± 0.14 | 82.56 ± 0.41 | +6.23 |
+
+**||W_k||_F mean:**
+
+| Dataset | k=0 | k=1 | k=2 | k=4 | k=8 | xavier ref |
+|---|---|---|---|---|---|---|
+| Cora | 9.76 | 5.77 | 3.31 | 2.64 | 3.33 | 37.85 |
+| Computers | 10.26 | 6.62 | 5.08 | 5.55 | 7.21 | 27.69 |
+
+**cos(W_k, W_k') mean:**
+
+Cora:
+| pair | 0-1 | 0-2 | 0-4 | 0-8 | 1-2 | 1-4 | 1-8 | 2-4 | 2-8 | 4-8 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| cos | 0.696 | 0.570 | 0.218 | 0.042 | 0.735 | 0.290 | 0.054 | 0.546 | 0.183 | 0.597 |
+
+Computers:
+| pair | 0-1 | 0-2 | 0-4 | 0-8 | 1-2 | 1-4 | 1-8 | 2-4 | 2-8 | 4-8 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| cos | 0.934 | 0.850 | 0.796 | 0.789 | 0.944 | 0.889 | 0.880 | 0.970 | 0.951 | 0.983 |
+
+**Wall-clock:** Cora precompute 3.06 s, mean-epoch 60.7 ms, train 12.1 s/seed. Computers precompute 4.49 s, mean-epoch 147.1 ms, train 29.4 s/seed.
+
+# Numerical answers to RA's numbered questions (D6 portion; V2-E1 answers appended later)
+
+**Q1 — Does D6c hard-pass Computers?** Yes. Z_mean 88.26 ± 0.40 ≥ 87.53 (+0.73). Z_concat 88.00 ± 0.27 ≥ 87.53 (+0.47).
+
+**Q2 — Does Z_concat beat Z_mean on Cora?**
+- D6a: Z_concat 80.99 vs Z_mean 81.60 → Z_mean higher by 0.61.
+- D6b: Z_concat 79.36 vs Z_mean 78.99 → Z_concat higher by 0.37.
+- D6c: Z_concat 81.83 vs Z_mean 81.80 → Z_concat higher by 0.03.
+
+**Q3 — Does ||W_k||_F collapse under WD in D6a like INQ-005 E3?**
+- D6a Cora ||W_k||_F: 7.17 / 4.46 / 3.93 / 3.97 / 4.69 (xavier 15.33). Ratios to xavier init: 0.47 / 0.29 / 0.26 / 0.26 / 0.31.
+- INQ-005 E3 Cora ||W_k||_F: 3.49 / 2.26 / 2.03 / 2.05 / 2.23 (xavier 15.33). Ratios: 0.23 / 0.15 / 0.13 / 0.13 / 0.15.
+- D6a ratios are approximately 2× E3 ratios per depth.
+- D6b Cora ratios (xavier 37.85): 0.26 / 0.17 / 0.15 / 0.15 / 0.16.
+- D6c Cora ratios (xavier 37.85): 0.26 / 0.15 / 0.09 / 0.07 / 0.09.
+- D6a Computers ratios (xavier 14.81): 0.41 / 0.34 / 0.35 / 0.40 / 0.50.
+- D6b Computers ratios (xavier 27.69): 0.28 / 0.25 / 0.25 / 0.28 / 0.34.
+- D6c Computers ratios (xavier 27.69): 0.37 / 0.24 / 0.18 / 0.20 / 0.26.
+
+**Q4 / Q5 — answered in V2-E1 section below.**
+
+**Q6 — Best on Cora, which variant?**
+- Z_concat: D6c 81.83 > D6a 80.99 > D6b 79.36.
+- Z_mean: D6c 81.80 ≈ D6a 81.60 > D6b 78.99.
+
+# DIAGNOSTIC RESULTS — V2-E1-τ_p sweep (τ_α=1.0)
+
+**Argmin_k H_ik frac (per-node dominant depth) — lead diagnostic:**
+
+Cora:
+| τ_p | k=0 | k=1 | k=2 | k=4 | k=8 |
+|---|---|---|---|---|---|
+| 0.001 | 75.3% | 16.8% | 5.4% | 1.5% | 1.0% |
+| 0.01 | 97.6% | 0.4% | 0.3% | 0.3% | 1.4% |
+| 0.05 | 2.6% | 0.02% | 0.04% | 0.06% | **97.3%** |
+| 0.1 | 1.3% | 0% | 0% | 0.04% | **98.7%** |
+| 1.0 | 0.6% | 0% | 0% | 0.02% | **99.4%** |
+
+Computers:
+| τ_p | k=0 | k=1 | k=2 | k=4 | k=8 |
+|---|---|---|---|---|---|
+| 0.001 | **98.7%** | 1.2% | 0.01% | 0.04% | 0.09% |
+| 0.01 | **99.9%** | 0.07% | 0% | 0% | 0% |
+| 0.05 | **99.98%** | 0.02% | 0% | 0% | 0% |
+| 0.1 | **99.98%** | 0.02% | 0% | 0% | 0% |
+| 1.0 | **99.8%** | 0.01% | 0% | 0% | 0.2% |
+
+**Z-probe:**
+
+| τ_p | Cora Z | Computers Z | Cora vs 78.87 | Cora vs 76.25 | Comp vs 87.53 | Comp vs 86.10 |
+|---|---|---|---|---|---|---|
+| 0.001 | 73.99 ± 0.51 | 85.34 ± 0.54 | FAIL (−4.88) | FAIL (−2.26) | FAIL (−2.19) | FAIL (−0.76) |
+| 0.01 | 74.82 ± 0.23 | 85.76 ± 0.38 | FAIL (−4.05) | FAIL (−1.43) | FAIL (−1.77) | FAIL (−0.34) |
+| 0.05 | 76.33 ± 0.22 | 86.08 ± 0.49 | FAIL (−2.54) | PASS (+0.08) | FAIL (−1.45) | FAIL (−0.02) |
+| 0.1 | 76.23 ± 0.15 | 86.11 ± 0.49 | FAIL (−2.64) | FAIL (−0.02) | FAIL (−1.42) | PASS (+0.01) |
+| 1.0 | 76.17 ± 0.18 | 86.12 ± 0.49 | FAIL (−2.70) | FAIL (−0.08) | FAIL (−1.41) | PASS (+0.02) |
+
+Raw references (same across τ_p, re-reported): Cora raw Â^8 X = 78.81 ± 0.14, raw mean 76.19 ± 0.18. Computers raw Â^1 X = 87.50 ± 0.37, raw mean 86.11 ± 0.47.
+
+**Per-depth H mean (across 3 seeds):**
+
+Cora:
+| τ_p | k=0 | k=1 | k=2 | k=4 | k=8 | ln(7) ref | spread (max−min) |
+|---|---|---|---|---|---|---|---|
+| 0.001 | 0.291 | 0.621 | 0.720 | 0.864 | 0.948 | 1.946 | 0.657 |
+| 0.01 | 1.345 | 1.850 | 1.730 | 1.694 | 1.558 | 1.946 | 0.505 |
+| 0.05 | 1.843 | 1.936 | 1.878 | 1.831 | 1.720 | 1.946 | 0.216 |
+| 0.1 | 1.916 | 1.943 | 1.921 | 1.893 | 1.832 | 1.946 | 0.111 |
+| 1.0 | 1.946 | 1.946 | 1.946 | 1.945 | 1.944 | 1.946 | 0.002 |
+
+Computers:
+| τ_p | k=0 | k=1 | k=2 | k=4 | k=8 | ln(10) ref | spread (max−min) |
+|---|---|---|---|---|---|---|---|
+| 0.001 | 1.378 | 1.984 | 2.133 | 2.071 | 1.942 | 2.303 | 0.755 |
+| 0.01 | 1.839 | 2.213 | 2.288 | 2.279 | 2.207 | 2.303 | 0.449 |
+| 0.05 | 2.234 | 2.290 | 2.302 | 2.301 | 2.290 | 2.303 | 0.068 |
+| 0.1 | 2.274 | 2.299 | 2.302 | 2.302 | 2.299 | 2.303 | 0.028 |
+| 1.0 | 2.302 | 2.303 | 2.303 | 2.303 | 2.303 | 2.303 | 0.001 |
+
+**α statistics:**
+
+Cora:
+| τ_p | α mean-std across k | frac α-ent < 0.8·ln(K) | corr α vs −H |
+|---|---|---|---|
+| 0.001 | 0.0504 | 0.000 | 0.734 |
+| 0.01 | 0.0376 | 0.005 | 0.925 |
+| 0.05 | 0.0161 | 0.000 | 0.963 |
+| 0.1 | 0.0084 | 0.000 | 0.983 |
+| 1.0 | 0.0002 | 0.000 | 0.995 |
+
+Computers:
+| τ_p | α mean-std across k | frac α-ent < 0.8·ln(K) | corr α vs −H |
+|---|---|---|---|
+| 0.001 | 0.0639 | 0.001 | 0.933 |
+| 0.01 | 0.0372 | 0.000 | 0.993 |
+| 0.05 | 0.0053 | 0.000 | 0.997 |
+| 0.1 | 0.0023 | 0.000 | 0.997 |
+| 1.0 | 0.0000 | 0.000 | 0.997 |
+
+Pass bars: α mean-std > 0.02, frac α-ent < 0.8·ln(K) ≥ 0.20.
+
+| Dataset / τ_p | α mean-std > 0.02? | frac-ent ≥ 0.20? |
+|---|---|---|
+| Cora 0.001 | PASS | FAIL |
+| Cora 0.01 | PASS | FAIL |
+| Cora 0.05 | FAIL | FAIL |
+| Cora 0.1 | FAIL | FAIL |
+| Cora 1.0 | FAIL | FAIL |
+| Comp 0.001 | PASS | FAIL |
+| Comp 0.01 | PASS | FAIL |
+| Comp 0.05 | FAIL | FAIL |
+| Comp 0.1 | FAIL | FAIL |
+| Comp 1.0 | FAIL | FAIL |
+
+**Correlations of argmin_k H with node structure (best-probe τ_p per dataset):**
+
+Cora best probe: τ_p=0.05 (Z=76.33). corr argmin-k vs degree = 0.006; vs local homophily = 0.009; vs 1-hop label entropy = 0.004.
+
+Computers best probe: τ_p=1.0 (Z=86.12). corr argmin-k vs degree = 0.180; vs local homophily = −0.005; vs 1-hop label entropy = −0.015.
+
+# Numerical answers to remaining questions
+
+**Q4 — At which τ_p does H_ik stop being numerically saturated at log(M)?**
+- Cora (ln 7 = 1.946): saturation threshold (spread > 0.01) crossed at τ_p ≤ 0.1 (spread 0.111). Fully saturated at τ_p = 1.0 (spread 0.002).
+- Computers (ln 10 = 2.303): saturation threshold (spread > 0.01) crossed at τ_p ≤ 0.1 (spread 0.028). Fully saturated at τ_p = 1.0 (spread 0.001).
+
+**Q5 — At best-probe τ_p on Computers, does argmin-k flip to k=1?**
+- Best Computers probe τ_p = 1.0 (Z=86.12). argmin_k=0 dominates at 99.8%. No flip.
+- Best Computers α mean-std τ_p = 0.001 (std=0.0639). argmin_k=0 dominates at 98.7%. No flip.
+- Across all τ_p ∈ {0.001, 0.01, 0.05, 0.1, 1.0} on Computers, argmin_k=0 share ≥ 98.7%.
+
+**Q6 — Best on Cora for V2-E1:** τ_p=0.05, Z=76.33.
+
+# Final numerical table across all INQ-003 configs
+
+| Config | Cora Z (mean/headline) | Computers Z (mean/headline) | Cora hard (78.87) | Cora soft (76.25) | Comp hard (87.53) | Comp soft (86.10) |
+|---|---|---|---|---|---|---|
+| D6a Z_mean | 81.60 ± 0.67 | 82.39 ± 0.18 | PASS | PASS | FAIL | FAIL |
+| D6a Z_concat | 80.99 ± 0.52 | 84.53 ± 0.22 | PASS | PASS | FAIL | FAIL |
+| D6b Z_mean | 78.99 ± 0.78 | 80.32 ± 0.42 | PASS | PASS | FAIL | FAIL |
+| D6b Z_concat | 79.36 ± 0.80 | 82.86 ± 0.17 | PASS | PASS | FAIL | FAIL |
+| D6c Z_mean | 81.80 ± 0.20 | **88.26 ± 0.40** | PASS | PASS | **PASS** | PASS |
+| D6c Z_concat | 81.83 ± 0.29 | **88.00 ± 0.27** | PASS | PASS | **PASS** | PASS |
+| V2-E1 τ_p=0.001 | 73.99 ± 0.51 | 85.34 ± 0.54 | FAIL | FAIL | FAIL | FAIL |
+| V2-E1 τ_p=0.01 | 74.82 ± 0.23 | 85.76 ± 0.38 | FAIL | FAIL | FAIL | FAIL |
+| V2-E1 τ_p=0.05 | 76.33 ± 0.22 | 86.08 ± 0.49 | FAIL | PASS | FAIL | FAIL |
+| V2-E1 τ_p=0.1 | 76.23 ± 0.15 | 86.11 ± 0.49 | FAIL | FAIL | FAIL | PASS |
+| V2-E1 τ_p=1.0 | 76.17 ± 0.18 | 86.12 ± 0.49 | FAIL | FAIL | FAIL | PASS |
+
+# Implementation / cost notes
+
+- D6 module: `ad_ssl/experiments/adssl_d6.py`, `--variant {a,b,c}`, `--exclude_wk_from_wd` for a follow-up V-WD if RA requests.
+- V2-E1 sweep reuses `ad_ssl/experiments/adssl_entropy.py --mode E1 --tau_p X`.
+- Branch: `ad-ssl/track2-d6-cross-depth-infonce` off `ad-ssl/track2-e-entropy-routing`.
+- Wall-clock (3 seeds each, per dataset):
+  - D6a: Cora 4.8 s train, Computers 9.7 s train.
+  - D6b: Cora 11.9 s train, Computers 29.0 s train.
+  - D6c: Cora 12.1 s train, Computers 29.4 s train.
+  - V2-E1 τ_p sweep (5 values × 2 datasets × 3 seeds): ≈ 4 min total (dominated by k-means fits).
