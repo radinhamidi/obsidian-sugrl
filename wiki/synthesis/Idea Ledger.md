@@ -4,7 +4,7 @@ type: synthesis
 tags: [neurips-2026, ad-ssl, idea-ledger]
 created: 2026-04-23
 updated: 2026-04-23
-last_response: 2026-04-23 (CA returned INQ-005; entropy spec was under-tested — τ_p saturation artifact + ridge-confidence invalid; E3-Cora latent probe pass; D1' confirms D1 dead both ways)
+last_response: 2026-04-23 (CA returned INQ-006 [INQ-2026-04-23-003]; **D6c hard-passes both Cora +2.93 and Computers +0.73** — first simultaneous double-pass in the project; V2-E1 τ_p sweep confirmed entropy-from-kmeans on raw X_k is structurally dead on these datasets regardless of τ)
 ---
 
 # Idea Ledger
@@ -48,13 +48,21 @@ Status values: `live`, `testing`, `closed-falsified`, `closed-superseded`, `back
   3. **The "flat H across k" finding is a τ_p=1.0 spec artifact, not a theorem.** Cora E1 H values (1.946 × 5 depths) equal log(7) = 1.9459 to 4 decimals — the softmax is numerically uniform over classes. Same on Computers (2.302 ≈ log(10)). τ_p=1.0 on k-means distances pre-saturated entropy regardless of underlying cluster quality. **Entropy-as-signal was never given a temperature at which it could respond.** (The spec bug is mine — I wrote `τ_p = τ_α = 1.0 default`.)
   4. **E4's "failed flip test" uses ridge-probe softmax as a confidence source.** Ridge is trained for MSE on 20-per-class labels, not for calibrated probability. With high-dim features + few labels, test-node ridge logits reflect feature-space overfitting geometry, not class confidence. Q5's "E4 is the supervised ceiling" framing was wrong: the ceiling was never supervised-well-calibrated; it was supervised-poorly-operationalized.
   5. **E3 Computers failure (79.48) is a projection bottleneck, not an entropy or α failure.** Raw Â¹X = 87.49; projecting 767 → 128 strictly loses info. E3-V-WD Z_k probes (81/84/84/83/80) are 2–4 pts below their raw counterparts even with healthy W_k. The 128-dim projection is the wrong architectural choice here; swap to d_proj = F_in or identity-skip.
-- **What is confirmed dead:** E1/E2/E4 at τ_p=1.0 + ridge-confidence. These specific operationalizations are dead.
-- **What is NOT confirmed dead:** entropy-as-α-signal broadly. Not tested at any reasonable τ, and the "ceiling" experiment used an invalid confidence measure.
-- **What is confirmed alive (latent):** cross-depth InfoNCE as a multi-depth SSL pretext on Cora — the E3 W_k lifted every depth to ≈80 on Cora (k=0 raw 46.79 → post-InfoNCE 75.68, +28.9 pts). This is a method in its own right, independent of α.
+- **What is confirmed dead (updated 2026-04-23 by [[INQ-2026-04-23-003]] V2-E1 τ_p sweep):** entropy-from-kmeans on raw X_k as an α-routing signal is **structurally dead on Cora + Computers across all tested τ_p ∈ {0.001, 0.01, 0.05, 0.1, 1.0}**. Computers: argmin_k H locks on k=0 at 98.7–99.98% at every τ_p (never flips to k=1 where the signal lives). Cora: argmin flips between k=0 (low τ) and k=8 (high τ) but α never sharpens enough to matter (α mean-std 0.0002 at τ=1.0 → Z = raw mean-pool). None of the 5 τ settings hard-pass either dataset; best probe (Cora τ_p=0.05 = 76.33; Computers τ_p=1.0 = 86.12) stays at or below raw mean-pool floor. corr(argmin-k, degree / local-homophily / label-entropy) ≈ 0 at every τ_p. **E1 is closed.** E2 and E4 inherit E1's dead signal on raw X_k → also closed on raw X_k. See O7 update below.
+- **What is NOT confirmed dead:** entropy-from-kmeans on **cross-depth-InfoNCE-transformed features Z_k** (not raw X_k). Z_k after D6c training has fundamentally different k-means structure than X_k; that signal has not been tested. Queued as Config C in [[INQ-2026-04-23-004]] (D6c+α).
+- **What is confirmed alive — MAJOR (updated 2026-04-23):** cross-depth InfoNCE with residual projection is a working SSL pretext. See D6c under Live below.
 
 ## Live — currently being tested
 
-_None — awaiting Radin's pick from the 2026-04-23 INQ-005 post-mortem slate (D5/D6/V2/D7/D8/D9). See Backlog._
+### D6c — Cross-depth InfoNCE with residual F_in-preserving projection (no α at training)
+- **Status:** **live, primary-pass 2026-04-23.** First configuration in the project to hard-pass both Cora and Computers simultaneously. Extensions running in [[INQ-2026-04-23-004]].
+- **Evidence (3 seeds, from [[INQ-2026-04-23-003]]):** Cora Z_mean 81.80 ± 0.20 (bar 78.87, +2.93 at ~14σ across-seed); Computers Z_mean 88.26 ± 0.40 (bar 87.53, +0.73 at ~1.8σ across-seed, ~3.2σ in stderr). Z_concat within 0.15 pts of Z_mean on both datasets. Every per-depth Z_k probe beats its raw Â^k X counterpart on both datasets.
+- **Architecture:** `Z_k = X_k + W_k X_k`, W_k ∈ R^{F_in × F_in} linear one per k ∈ {0,1,2,4,8}. Flat cross-depth InfoNCE: positive pairs (Z_k[i], Z_{k'}[i]) for k ≠ k'; negative pairs (Z_k[i], Z_{k'}[j]) for j ≠ i. No α, no L_ent, no confidence weighting. 200 epochs, Adam lr=0.01, WD=5e-4, τ_c=1.0. Readout: Z_mean = (1/K) Σ_k Z_k.
+- **Mechanism (RA independent read):** residual guarantees Z_k information floor ≥ X_k (can't drop below raw signal); cross-depth InfoNCE pushes each W_k to encode cross-depth-discriminative structure on top of the floor. The outcome is not "residual rescued k=1" — it's a clean ensemble lift: D6a (no residual) HURT Computers k=1 by −4.50, D6c lifted every depth (+0.71 at k=1, +5.13 at k=0, +2.04 at k=2, +4.52 at k=4, +6.23 at k=8). Different mechanism: D6a's linear projection under WD shrinks W_k so Z_k ≈ W_k X_k ≈ 0; D6c's residual lets the InfoNCE gradient shape a useful W_k transformation regardless of ||W_k||_F. Depth-decorrelation also differs: cos(W_k, W_k') drops to 0.04 (k=4 vs k=8) on Cora, indicating genuinely depth-distinct projections on Cora; stays high 0.78–0.99 on Computers (residual+InfoNCE couldn't decouple depths there, but every depth still improved).
+- **Caveat / open:** Computers +0.73 is tight (1.8σ across-seed at 3 seeds). 5-seed confirmation queued as Config B in [[INQ-2026-04-23-004]]. ogbn-arxiv extension queued as Config A.
+- **Open thesis question:** does α on top of D6c help or hurt? If α-free D6c is the best-performing variant, the paper pivots from "adaptive-depth SSL" to "cross-depth InfoNCE on pre-propagated features with residual projection" — still novel, but thesis framing changes. Queued as Config C in [[INQ-2026-04-23-004]].
+- **Contribution sentence (current draft):** "Cross-depth instance-discrimination contrastive learning on precomputed multi-depth features, with a residual F_in-preserving per-depth projection, produces a depth-diverse representation that hard-passes best-single-depth linear probes on Cora and Computers. The depth itself — not an augmentation view — is the contrastive axis; the method operates fully at precompute time with no encoder."
+- **Reviewer attack:** "How does this differ from multi-view contrastive methods that use depth as a view?" Needs literature audit on prior "Â^k vs Â^{k'} contrastive at precompute" work. Queued.
 
 ## Backlog — candidates for next live direction
 
@@ -75,11 +83,10 @@ Current slate (2026-04-23 INQ-005 post-mortem). D6 and V2 are the RA's top picks
 - **Strongest reviewer objection:** "How is this different from multi-view contrastive with depth as view?" Answer: prior work uses augmented views at a fixed depth; we use the propagation depth itself as the view, decoupled from training compute. Needs audit of any paper already doing "Â^k vs Â^{k'} contrastive" — flag for literature check.
 - **Status:** strongest signal in hand (already +2.86 pts on Cora from INQ-005 E3). Top pick.
 
-### V2 — Retest entropy family with tuned τ_p, CE-trained probe (close the spec-bug gap)
-- **Premise:** INQ-005 tested E1/E2/E4 at τ_p=1.0 which numerically saturated the softmax to log(M) uniform. E4 used ridge (MSE) as a "supervised" probe, which is not a valid confidence source. Before declaring entropy-routing dead, retest at τ_p ∈ {0.01, 0.05, 0.1} AND swap E4 ridge → CE-trained probe (or leave-one-out CV error as the confidence signal).
-- **Contribution alone:** not a paper on its own; this is a competence check before closing the direction.
-- **Min experiment:** τ_p sweep on E1 + E4-CE on Cora + Computers, 3 seeds. ~4 hours CA time.
-- **Recommendation:** run regardless of which larger direction we pick. If the entropy signal responds correctly at any τ_p, the direction opens up again. If it still fails with a proper spec, then the direction is cleanly closed.
+### V2 — Retest entropy family with tuned τ_p (CLOSED 2026-04-23, on raw X_k)
+- **Status:** closed-falsified for entropy-from-kmeans on **raw X_k**. See C4 update above and O7 below. V2-E1 τ_p sweep ([[INQ-2026-04-23-003]]) tested τ_p ∈ {0.001, 0.01, 0.05, 0.1, 1.0} on Cora + Computers. At no τ_p does the probe hard-pass; on Computers the argmin-k distribution locks to k=0 at 98.7–99.98% at every τ_p (structural dataset property, not a temperature issue). argmin-k has zero correlation with degree/local-homophily/label-entropy at best-probe τ_p.
+- **What remains open:** entropy-from-kmeans on cross-depth-InfoNCE-transformed Z_k (different context, different cluster geometry). Running as Config C in [[INQ-2026-04-23-004]]. Constraint non-propagation rule applies: V2-E1 raw-X_k failure does NOT auto-transfer to Z_k.
+- **CE-probe replacement for E4:** not queued. E4's ridge-softmax was the defensibly-supervised ceiling; the "ceiling" direction only matters if the unsupervised signal responds, and it doesn't. If Config C surfaces a responsive unsupervised entropy signal on Z_k, revisit an E4-CE probe on Z_k at that point.
 
 ### H4 / D1' — linear-W_k WD-exclusion controlled test (CLOSED 2026-04-23)
 - See "Closed" section above. Confirmed linear-W_k D1 dead both ways. Not a live candidate IN THE LINEAR REGIME.
@@ -161,10 +168,12 @@ Current slate (2026-04-23 INQ-005 post-mortem). D6 and V2 are the RA's top picks
 - **Observed in:** [[INQ-2026-04-23-002]] D1' section. Removing W_k from WD does not rescue D1 — it flips the collapse from WD-shrinkage (||W_k||_F → 2.7e-4) to WD-free-explosion (||W_k||_F → 100-300, 17-20× xavier). In the second regime, α passes every movement diagnostic (mean-std 0.28, frac concentrated 1.00) — yet Z-probe crashes to Cora 55 / Computers 40 because shared-head softmax saturates per-depth and mixing saturated heads is not meaningful depth routing.
 - **Interpretation:** L_S1 + shared head on homophilic features admits no non-degenerate W_k geometry. The INQ-004 row-2/row-5 gap closes on row-5 (hypothesis genuinely wrong), not row-2 (hyperparam).
 
-### O7 — τ_p=1.0 on k-means distances saturates p_ik to class-uniform
-- **Observed in:** [[INQ-2026-04-23-002]] E1/E2 per-depth H tables. Cora H ≡ 1.946 = log(7) to 4 decimals on every depth and seed; Computers H ≡ 2.302 ≈ log(10). The softmax at τ_p=1.0 is numerically at maximum entropy over classes regardless of which cluster each node is closest to.
-- **Interpretation:** the spec's default τ_p=1.0 (mine) pre-saturated the entropy measurement. E1/E2 could not have shown a depth-asymmetric entropy signal at this τ even if the underlying cluster quality were perfect. Before closing entropy-as-signal, a τ_p sweep is required (see V2 in current slate).
-- **Revisit when:** specifying any softmax-over-distance signal with default τ=1.0 — check the distance scale first and set τ accordingly.
+### O7 — τ_p=1.0 on k-means distances saturates p_ik to class-uniform (and fixing it doesn't help on raw X_k)
+- **Observed in:** [[INQ-2026-04-23-002]] E1/E2 per-depth H tables (saturation); [[INQ-2026-04-23-003]] V2-E1 τ_p sweep (fixing saturation doesn't rescue signal on raw X_k).
+- **Saturation:** Cora H ≡ 1.946 = log(7) to 4 decimals on every depth and seed at τ_p=1.0; Computers H ≡ 2.302 ≈ log(10). Fully saturated.
+- **Sweep result (raw X_k, [[INQ-2026-04-23-003]]):** saturation breaks at τ_p ≤ 0.1 (spread > 0.01), but the argmin-k signal is structurally wrong regardless of τ: Computers argmin_k=0 at 98.7–99.98% at every τ_p (should prefer k=1); Cora argmin flips to k=8 at high τ_p but α is too soft to matter. Best probe at any τ_p stays at or below raw mean-pool floor on both datasets.
+- **Interpretation:** τ_p=1.0 was a spec bug that masked a deeper fact — entropy-from-kmeans on L1-row-normalized raw X_k tracks feature concentration, not class structure, on these datasets. Temperature only changes the sharpness of a wrong signal. Non-propagation: this conclusion is local to raw X_k; Z_k (post-InfoNCE) has different cluster geometry and needs its own test.
+- **Revisit when:** specifying any softmax-over-distance signal — always (a) log the pre-softmax distance scale and (b) sweep τ *before* drawing a verdict, so spec bugs aren't confused with structural signal failures.
 
 ### O4 — V3 below-random + high-variance is the signature of a dead architecture
 - **Observed in:** INQ-004 V3 nonlinear W_k on Cora. Z-probe 16.48 ± 4.17 (7-class random ≈ 14.3). Per-seed variance is an order of magnitude larger than any non-dead variant (±0.2–1.0 elsewhere). Mechanism: ReLU + WD produces near-zero pre-activations; seed-dependent h(b) lands at a slightly informative constant for some seeds, pure noise for others.
