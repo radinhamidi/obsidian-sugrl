@@ -1,0 +1,955 @@
+                                                                       Neurocomputing 596 (2024) 127952
+
+
+                                                                   Contents lists available at ScienceDirect
+
+
+                                                                          Neurocomputing
+                                                         journal homepage: www.elsevier.com/locate/neucom
+
+
+
+
+When decoupled GCN meets group discrimination: A special graph
+contrastive learning framework
+Yinjie Gao a , Yaxin Sun a , Shan Jin b , Dawei Zhang a , Jinli Cao c , Zhonglong Zheng a ,∗
+a
+    School of Computer Science and Technology, Zhejiang Normal University, Jinhua, 321000, China
+b
+    Polytechnic Institute, Zhejiang University, Hangzhou, 310000, China
+c
+    Department of Computer Science and Information Technology, La Trobe University, Australia
+
+
+
+ARTICLE                 INFO                              ABSTRACT
+
+Communicated by A.D. Jagtap                               While Graph Contrastive Learning (GCL) has demonstrated satisfactory outcomes, three main problems remain.
+                                                          First, to effectively transmit the message of higher-order hop nodes, it is imperative to stack multiple graph
+Keywords:
+                                                          convolution layers, which results in heightened computational demands and memory requirements. Second,
+Graph Contrastive Learning
+Graph Neural Network
+                                                          the traditional GCL framework employs the pairwise comparison of positive and negative samples, which
+Self-supervised learning                                  could slow model training and necessitate considerable computing resources. Third, the GCL paradigm places
+Machine learning                                          considerable emphasis on the data augmentation. Some augmentation techniques focus on altering the graph’s
+                                                          structure, which demand significant computational resources. In order to resolve the aforementioned problems
+                                                          in GCL, we incorporate the decoupled GCN into GCL paradigm and develop a new GCL framework termed
+                                                          Decoupled Group Discrimination (DGD), which relies on a one-layer Multi-Layer Perceptron (MLP) encoder and
+                                                          entirely abandons GCN. We also put forward a new negative sample generation strategy which is customized for
+                                                          DGD and enriches the graph structure information during training. Furthermore, we identify a more effective
+                                                          approach to aggregate information from individual nodes by a range of learnable parameters. Experiments on
+                                                          various datasets for the node classification reveal that DGD yields the superior accuracy, faster training time,
+                                                          and less memory consumption. Specifically, DGD improves the overall accuracy of the node classification by
+                                                          a margin of 1 to 2 percentages with the time required for the model training diminished by over 90% and the
+                                                          memory reduced exceeding 70%.
+
+
+
+1. Introduction                                                                                   Despite GCL’s notable achievements, it is accompanied by three
+                                                                                              primary issues. First, the employment of the one-layer of GCN in the
+    Graph-structured data are ubiquitous [1,2] and Graph Neural Net-                          conventional GCL paradigm restricts the message passing solely to the
+work (GNN) [3] is a deep learning method that operates upon the graph                         neighbors within one hop of the nodes. In the pursuit of transmitting
+structure to extract deep network features via multiple layers of neural                      high-order hop node information, multiple GCN layers are required,
+networks.                                                                                     leading to a concomitant rise in computational time and space cost
+    This approach facilitates the more comprehensive learning and                             that may eventually decay its performance [9]. Second, the pairwise
+prediction of the entire graph [4]. While supervised or semi-supervised                       comparison between positive and negative samples in the contrastive
+methods have made significant strides in graph-based deep learning                            learning leads to a protracted and resource-intensive model training
+research, the demands and expenses associated with collecting and                             process. Furthermore, GCL heavily relies on data augmentation [10].
+labeling tags present a significant challenge.                                                It frequently amalgamates two augmentation methods predicating on
+    Self-supervised learning [5,6] is a recent innovation which is not re-                    node attributes and topological structure [11]. However, augmentation
+liant on annotations but instead derives labels automatically by uncov-                       methodologies involving graph structure alterations, such as graph
+ering relationships between diverse data elements. Graph Contrastive                          diffusion, subgraph sampling, and edge modification [12], necessitate
+Learning (GCL) [7] is a graph self-supervised learning method which                           extensive time. The inappropriate sampling of negative samples, and
+is premised upon the maximization of mutual information and learns                            augmentation approaches can further exacerbate the decrease of GCL’s
+through predicting the consistency between two augmented graph                                performance.
+instances [8].
+
+
+     ∗ Corresponding author.
+    E-mail addresses: gaoyinjie@zjnu.edu.cn (Y. Gao), sunyaxin2005@163.com (Y. Sun), 12321310@zju.edu.cn (S. Jin), davidzhang@zjnu.edu.cn (D. Zhang),
+J.Cao@latrobe.edu.au (J. Cao), zhonglong@zjnu.edu.cn (Z. Zheng).
+
+https://doi.org/10.1016/j.neucom.2024.127952
+Received 20 February 2024; Received in revised form 17 April 2024; Accepted 27 May 2024
+Available online 28 May 2024
+0925-2312/© 2024 Elsevier B.V. All rights are reserved, including those for text and data mining, AI training, and similar technologies.
+Y. Gao et al.                                                                                                              Neurocomputing 596 (2024) 127952
+
+
+    Previous research tried decoupling GCN by dissecting the two-step           parameter sharing in CNNs to non-European structured data. How-
+process of the message passing and feature transformation, while also           ever, the unique characteristics of graph data present challenges in
+reducing the redundant linear transformations that are inherent in              defining the convolution on graphs. In response to this problem, early
+GCN. One example is SGC [9], which is a well-known and seminal                  researchers proposed two methods: spectral-based and spatial-based
+work. In the realm of GNNs, the utilization of SGC [9] has primarily            approaches. The spectral-based method, similar to CNNs, intuitively re-
+been focused on supervised or semi-supervised scenarios. However,               alizes convolution by aggregating information from neighboring nodes.
+the exploration of decoupled GCN in self-supervised scenarios remains           This spectral-based approach has propelled the development of Graph
+unexplored. Consequently, a meaningful research direction arises in             Neural Networks (GNNs) and has provided a framework for understand-
+the form of designing an appropriate pretext task within the frame-             ing information transmission in GNNs. The famous work [3] highlights
+work of decoupled GCN to effectively extract the supervised signal              the challenge of migrating the convolutional process from CNN to GCN,
+from the graph. In addition, recently, a novel paradigm of GCL called           which requires determining a fixed neighborhood. GraphSAGE [14]
+Graph Group Discrimination (GGD) [13] has been proposed, which                  employs a sampling method to determine the neighborhood. This in-
+discriminates two groups of augmented nodes and corrupted nodes                 volves performing a fixed number of random walks on the convolution
+to obtain node representation. While GGD [13] successfully addresses            nodes to obtain a fixed-sized set of neighboring nodes, followed by
+some issues in the conventional GCL framework, it still fails to mitigate       information aggregation.
+the drawbacks of slow computation and resource consumption caused                   Building upon prior research, the convolution operation in Graph
+by stacked multi-layer GCN in network structure design.                         Convolutional Networks(GCNs) [15] achieves by aggregating the neigh-
+    To address these issues, we adopt a principle according to which            boring node information. GCN accesses the first-order neighboring
+GCN can be decoupled as two distinct modules, the message pass-                 nodes and leverages the first-order hierarchical stacking to obtain
+ing process and the multi-layer perceptron (MLP). While the message             information from higher orders, such as second-order and third-order.
+passing facilitates the transmission of information within the graph,           However, the multi-layer GCN suffers from the over-smoothing prob-
+MLP is used to transform the node features. We propose a special GCL            lem, which is challenging to mitigate. To address this challenge, GC-
+model, Decoupled Group Discrimination (DGD), based on this premise.             NII [16] and DeepGCN [17] incorporated the residual connections
+Our model abandons GCN as the primary graph encoder and instead                 borrowed from convolutional networks in Computer Vision. GDC [18]
+uses an encoder with a single layer of MLP. This step improves the              utilized the graph diffusion technique to expand the aggregation range
+malleability and scalability of our model, enabling us to freely combine        of node neighborhoods and obtain global information. At the same
+numerous hop message passing views for optimal node information                 time, various decoupled GCN frameworks, such as SGC [9], have been
+transmission within the graph, minimizing the redundancy of feature             proposed to eliminate non-linear calculations between GCN layers and
+                                                                                produce locally smooth features on the graph. In lieu of employing the
+transformations, and enhancing computational efficiency. Moreover,
+                                                                                multi-layer convolution, both APPNP [19] and PPRgo [20] opted to
+DGD involves a new negative sample generation strategy termed partial
+                                                                                utilize the PPR matrix to effectuate the transmission and aggregation of
+corruption. The partial corruption is adapt to the framework of the
+                                                                                node information on the graph. Conversely, DAGNN [21] amalgamated
+decoupled GCN incorporated into Graph Contrastive Learning, which
+                                                                                diverse hop message passing views with weights that were acquired
+does not necessitate complicated computations but rather constitutes
+                                                                                via the network. Additionally, NAFS [22] eschewed the use of neural
+a straightforward yet effective data augmentation strategy exclusive
+                                                                                networks and instead relied upon attention-like methodologies to com-
+to the proposed DGD framework. This method varies the level of
+                                                                                pute the weights of different hop views prior to their consolidation.
+complexity in discriminating positive from negative groups during
+                                                                                These methods, developed primarily for supervised or semi-supervised
+model training, thereby enabling the model to gain additional useful
+                                                                                learning have mitigated the over-smoothing issue in the original GCN.
+information from a broader range of structures. Finally, DGD adopts a
+                                                                                In this paper, we propose to apply the decoupled GCN to self-supervised
+learnable parameter set upon node representation aggregation to help
+                                                                                learning scenarios and integrate it into a novel contrastive learning
+preserve richer information. When Binary Cross-Entropy (BCE) function
+                                                                                framework.
+applied in the loss computation, the loss computed with the aggregated
+node embeddings avoids the pairwise comparison of nodes and has
+                                                                                2.2. Graph Contrastive Learning
+faster computational speed. The contributions are as follows:
+                                                                                    To overcome the limitations of (Semi-) Supervised Learning’s re-
+    • We introduce the concept of decoupled GCN to graph contrastive
+                                                                                liance on labels, Self-Supervised learning (SSL) presents a promising
+      learning methodologies. Specifically, we propose a model named
+                                                                                approach. The roots of SSL on graphs can be traced back to previous in-
+      DGD that sheds the use of GCN and instead employs a one-layer
+                                                                                vestigations on unsupervised graph embedding, such as DeepWalk [23]
+      MLP encoder, leading to fast training and reduced memory usage.
+                                                                                and Node2vec [24]. Another noteworthy unsupervised learning model,
+    • We present a fresh negative sampling strategy, referred to as
+                                                                                the Graph Autoencoder [25], can also be regarded as a form of graph
+      partial corruption, that can be adapted to DGD and enables the
+                                                                                self-supervised learning, as it aims to learn the reconstruction of graph
+      model to acquire fine graph structure information during training
+                                                                                structures.
+      by regulating the complexity of the learning task.
+                                                                                    Starting from 2019, the most recent advancements in the graph
+    • We propose an improved approach for node information aggre-
+                                                                                self-supervised learning have introduced a variety of pre-tasks, ranging
+      gation that preserves a rich semantic information for individual
+                                                                                from the contrastive learning [26] to graph attribute mining [27]. GCL
+      nodes via a set of learnable parameters.
+                                                                                revolves around the concept of maximizing Mutual Information [28].
+    • We demonstrate the efficacy of DGD in terms of the accuracy,
+                                                                                These methods encompass early graph embedding techniques [24]
+      training time, and memory consumption, through extensive ex-
+                                                                                based on the random walk [23], as well as the application of a series of
+      periments on diverse node classification datasets.                        computer vision contrastive learning frameworks (such as SimCLR [29]
+                                                                                and MoCo [30]) in the field of graphs.
+2. Related work                                                                     Moreover, in the realm of GCL, various studies have attempted
+                                                                                to optimize the technique of data augmentation for adapted and ef-
+2.1. Graph Neural Network                                                       ficient learning [31,32]. GCA [10], CA-GCL [33], and [34] proposed
+                                                                                adaptive augmentation schemes, while SimGRACE [35] utilized a per-
+  Inspired by the rapid advancements in Convolutional Neural Net-               turbed encoder instead of augmentation. These approaches aimed to
+works (CNNs), researchers have endeavored to extend the concept of              avoid the complexity of changing topology during augmentation. Other
+
+                                                                            2
+Y. Gao et al.                                                                                                                       Neurocomputing 596 (2024) 127952
+
+
+techniques involved utilizing clustering to resolve negative sample                  Computation. The representation of GCN normalized message pass-
+                                                                                                         1       1
+bias, such as method introduced by [36,37]. CuCo [38] optimized                  ing matrix is 𝐀  ̂ =𝐃̃ −2 𝐀
+                                                                                                           ̃𝐃̃ − 2 , where 𝐀
+                                                                                                                           ̃ = 𝐀 + 𝐈 is the adjacency matrix
+the negative sample selection through the curriculum learning, while             of graph  with self-loop added. ̃      𝐃 is the diagonal matrix of ̃
+                                                                                                                                                     𝐀, and
+SUGRL [39] obtained negative samples by directly shuffling embed-                𝐃𝑖𝑖 = 𝐝̃𝑖 is the degree of node 𝑖. The present paper employs 𝐀 to denote
+                                                                                  ̃
+dings output by MLP. In combination, these studies aimed to develop              𝐀̂ for the sake of clarity and utility. We posits a message passing view,
+strategies for optimized negative sample selection. Meanwhile, sev-              which may be formulated as follows:
+eral other studies combined different pretext tasks [40,41] to provide
+supervision signals for models from multiple perspectives, such as               𝐗𝑛 = 𝑃 (𝐗0 , 𝐀) = (𝐀 + 𝜆𝐈)𝑛 𝐗0 ,                                                  (1)
+MLGCL [42], which combined node-level and graph-level contrastive                where 𝑛 encapsulates the highest-order hop view that is embedded
+losses, HGMT [43], which utilized both metapath-based encoder and                within the message passing view. 𝐗0 represents the augmented attribute
+network schema-based encoder to get two different node represen-                 matrix prior to message passing. Typically, higher-order hop views con-
+tations, and MERIT [44], which utilized a Siamese Network to add                 tain amplified information while also entailing greater computational
+cross-network contrastive losses. It is different from the above methods         overhead. The parameter 𝜆 signifies the incorporation of extra weights
+that this paper focuses on decoupling the process of GCN’s message               for self-connected node information. When the parameter 𝜆 is height-
+passing and feature transformation in order to create a more effective           ened, it is crucial to observe that the message passing process places
+and efficient contrastive learning framework.                                    a heightened emphasis on local neighborhood data. Consequently, in a
+                                                                                 message passing process characterized by a greater 𝜆 value, the central
+3. Method                                                                        nodes do not expand excessively outward but instead concentrate on
+                                                                                 information pertinent to the immediate structure. Conversely, nodes
+    This section will furnish an elaborate explication of the models             situated on the edges encounter more challenges in navigating the
+and techniques posited. First, in Section 3.1, we posit the problem              intricate network layout. Consequently, an excessively high 𝜆 value will
+model and briefly highlighted the methodology of data augmentation.              impede nodes from acquiring insights into neighbors situated at higher
+Subsequently, in Section 3.2, we apprise the reader on the selection             hop distances.
+and computation of the message passing view employed. In Section 3.3,
+we initially expound on GGD [13]’s accomplishments, followed by                  3.3. Partial corruption
+outlining the specific implementation methodology and the principle of
+the partial corruption strategy. Further, in Section 3.4, we meticulously              Corruption Strategy. The initial step involves the introduction
+elucidate the framework of DGD. Last, in Section 3.5, we provide the             of the fundamental notions of graph homogeneity and graph hetero-
+inference of the model once its training completed.                              geneity. These concepts pertain to intrinsic characteristics of graphs
+                                                                                 and serve to elucidate the extent to which two interconnected nodes
+3.1. Problem definition                                                          exhibit similar attributes, such as belonging to the same category. If
+                                                                                 the majority of nodes within a graph exhibit comparable character-
+                                                                                 istics to their neighboring nodes, the graph is considered to possess
+    Given a graph  = {𝐗 ∈ R𝑁×𝐷 , 𝐀 ∈ R𝑁×𝑁 }, where 𝐗 is the node
+                                                                                 pronounced homogeneity, thereby being classified as a homogeneous
+attribute matrix, 𝑁 is the number of nodes, and 𝐷 is the dimension
+                                                                                 graph. Conversely, a graph featuring a considerable proportion of nodes
+of node attributes. 𝐀 is the adjacency matrix of the graph. If node
+                                                                                 with dissimilar attributes to those of their neighbors tends to form
+𝑖 is connected to node 𝑗, 𝐀𝑖𝑗 = 1; otherwise 𝐀𝑖𝑗 = 0. Motivated by
+                                                                                 connections between unrelated nodes, thus earning the classification
+Graph CL [7], we aim to implement the node feature masking as the
+                                                                                 of a heterogeneous graph. The model in grouping-based contrastive
+augmentation technique for a certain graph . Node feature masking
+                                                                                 learning employs a corruption strategy to acquire negative samples,
+entails setting a predetermined percentage of node feature dimensions
+                                                                                 predominantly achieved through the random shuffling of the aug-
+and replaces values to zero in randomly selected dimensions. We denote                                                   ̂ The fundamental approach within the
+                                                                                 mented node attribute matrix 𝐗.
+the augmented graph as ̂ = { ̂𝐗, 𝐀}. The objective is to train an MLP en-
+                                                                                 corruption strategy involves enhancing the heterogeneity of the graph
+coder without utilizing node labels. The encoder takes node attributes
+                                                                   ′             through modifications to its overarching structure, thereby yielding
+as input and outputs node feature representations 𝐇 ∈ R𝑁×𝐷 , where
+  ′
+                                                                                 a heterogeneous graph. The alteration of the node order causes the
+𝐷 is the custom output dimension. 𝐇 can be leveraged for various
+                                                                                 topological structure of the graph to change correspondingly, resulting
+downstream tasks, including the node classification.
+                                                                                 in incorrect message passing on the corrupted graph and leading to
+                                                                                 the creation of negative group. Conversely, correct message passing
+3.2. Message passing view                                                        occurs on the augmented graph, yielding positive group. The model can
+                                                                                 leverage these two sets of nodes to derive significant structural cues,
+   Selection. The initial undertaking involves the selection of the              whereas the conventional GCL typically acquires graph structure details
+message passing view. Prior literature on decoupled GCN has em-                  through node neighbor aggregation, focusing more on the distinct
+ployed various approaches towards computing weights for aggregating              attributes of each individual node.
+hop-specific message passing views of each node through weighted                       Implement. The present study proposes a methodology, called the
+summation. But DGD, the current model, requires the exchange of                  partial corruption, for the generation of negative groups. Specifically,
+node messages for various augmented and corrupted attribute matrices             given a parameter 𝛼 ∈ (0, 1), we divide the augmented node attribute
+during each epoch of model training. It is essential to consider that            matrix 𝐗̂ into two parts according to rows. The first part has 𝑁 ∗ 𝛼 rows
+the results and computational overhead associated with different hop             and the second part has 𝑁 ∗ (1 − 𝛼) rows. It can be described as: 𝐗̂ =
+message passing views and their combinations are different. The most             (𝐗̂ 1 , 𝐗̂ 2 ). To this end, partial corruption strategy involves the individual
+favorable approach, in pursuit of a harmonious blend of model effi-              shuffling of 𝐗̂ 1 and 𝐗̂ 2 , whereby one of them is subject to shuffling
+cacy and computational speed, is to opt for the message passing view             while the other remains unaltered. This process results in two corrupted
+with fewer hops for implementation while conducting model training.              graphs, ̃1 = {𝐗̃ 1 , 𝐀} and ̃2 = {𝐗̃ 2 , 𝐀}, where 𝐗̃ 1 = (𝑠ℎ𝑢𝑓 𝑓 𝑙𝑒(𝐗̂ 1 ), 𝐗̂ 2 ),
+Therefore, we consider the selected message passing view as a rule               𝐗̃ 2 = (𝐗̂ 1 , 𝑠ℎ𝑢𝑓 𝑓 𝑙𝑒(𝐗̂ 2 )). Subsequently, message passing is performed on
+that produces correct and incorrect node attributes through correct and          the two resulting graphs ̃1 and ̃2 , applying the message passing view
+incorrect message passing. After weighing the aforementioned factors,            expounded in Section 3.2, thus yielding two distinct attribute matrices,
+we suggest employing a straightforward yet valuable message passing              denoted as 𝐗̃ 𝑝1 = 𝑃 (𝐗̃ 1 , 𝐀), 𝐗̃ 𝑝2 = 𝑃 (𝐗̃ 2 , 𝐀). The two matrices are
+view that does not require extra time to procure.                                subsequently merged, following the separation method applied during
+
+                                                                             3
+Y. Gao et al.                                                                                                                                 Neurocomputing 596 (2024) 127952
+
+
+
+
+Fig. 1. The architecture of DGD. Given a graph , we apply augmentation on it to generate an augmented graph .  ̂ Subsequently, employing the strategy of partial corruption
+(e.g. 𝛼 = 0.5) and executing the message passing and combination procedures, we are able to derive two attribute matrices denoted as 𝐗̂ 𝑝 and 𝐗̃ 𝑝 . These two matrices are then
+regarded as input to a share-weight MLP encoder.
+
+
+
+
+       Fig. 2. The comparison between partial corruption and random corruption. The degree of white nodes remains unchanged while the degree of grey nodes changes.
+
+
+the onset of this methodology, 𝐗̃ 𝑝 = 𝑐𝑜𝑚𝑏𝑖𝑛𝑒(𝐗̃ 𝑝1 , 𝐗̃ 𝑝2 ), where combine               3, which is the common neighbor of nodes 1 and 2, remain consistent.
+operation connects the first 𝑁 ∗ 𝛼 rows of 𝐗̃ 𝑝1 and the last 𝑁 ∗                          By maintaining this degree of invariance, the homogeneity of hetero-
+(1 − 𝛼) rows of 𝐗̃ 𝑝2 into a new matrix. We use 𝐗̃ 𝑝 as the attribute                      geneous graphs generated through shuffled nodes can be strengthened.
+matrix of negative group of nodes in DGD. Corresponding to it, the                         This makes it more difficult for the model to group the two sets of
+attribute matrix of positive group of nodes is denoted as 𝐗̂ 𝑝 = 𝑃 ( ̂ 𝐗, 𝐀).              nodes, thereby facilitating a more efficient comparison and exploiting
+The comparison between partial corruption and random corruption is                         the group discrimination’s advantage of focusing on the distribution of
+shown in Fig. 2.                                                                           graph structures.
+    Explanation. The graph under consideration contains self-loops,
+wherein a node can be considered as its own neighbor. Consequently,                        3.4. Framework
+in the message passing implemented for each node, emphasis is placed
+on the attributes and degree of their neighboring nodes. Introduc-                             The diagram of DGD is shown in Fig. 1. During the model training,
+ing sufficient random node shuffling, the degree and attribute of the                      each epoch involves masking of the node feature of a given graph
+neighbors change, but the node retains one neighbor, which is itself,                       = {𝐗, 𝐀} to obtain an augmented graph ̂ = { ̂   𝐗, 𝐀}. According to the
+thereby preserving a certain degree of invariance even under conditions                    given partial corruption parameter 𝛼, the partial corruption strategy as
+of significant perturbations. To increase this level of invariance, we                     prescribed in Section 3.3 is then employed to generate two attribute
+incorporate the additional correct message passing in the incorrect                        matrices from partially shuffled graphs ̃1 and ̃2 . Subsequently, three
+one, thereby augmenting the difficulty for the model in discriminating                     graphs, , ̂ ̃1 and ̃2 , are subjected to the message passing view in
+positive and negative group of nodes. In a partially corrupted node                        Section 3.2 to obtain three attribute matrices, represented as 𝐗̂ 𝑝 , 𝐗̃ 𝑝1
+configuration, akin to previous situation, the attributes and degrees                      and 𝐗̃ 𝑝2 . 𝐗̃ 𝑝1 and 𝐗̃ 𝑝2 are merged in line with the partial corruption
+of neighboring nodes undergo modifications, whereas the attribute of                       strategy to form matrix 𝐗̃ 𝑝 .
+the node itself remains unaltered. In the event the shuffled node has                          A common neural network is utilized for the input of the aug-
+neighbors that are the same as before the shuffling and belong to                          mented node attribute matrix 𝐗̂ 𝑝 and the corrupted node attribute
+the unshuffled portion, the attributes and degrees of those neighbors                      matrix 𝐗̃ 𝑝 , comprised of three key components: the primary MLP,
+remain unchanged. Upon examination of the upper right corner of                            a customizable layer projector, and an aggregation head with ad-
+Fig. 2, it is evident that nodes 1 and 2 are shuffled, whereas nodes                       justable learnable parameters. The primary MLP is associated with the
+3, 4, and 5 retain their original positions. Particularly noteworthy is                    non-linear transformation in SGC [9] and represents the node feature
+the status of node 3, which, serving as a common neighbor to nodes 1                       transformation component of GCN subsequent to the message passing
+and 2, remains unaltered amidst the shuffling. An analysis of the pre                      procedure. The projector can be regarded as an extension of the back-
+and post corruption reveals that the degree and attributes of the node                     bone network within the context of network architecture. Typically,
+
+                                                                                       4
+Y. Gao et al.                                                                                                                            Neurocomputing 596 (2024) 127952
+
+
+
+
+Fig. 3. The inference of DGD. We obtain 𝐗𝑘 following the first message passing, and then put 𝐗𝑘 into trained MLP(𝐟𝜃 ) to derive 𝐇𝜃 . The second message passing process is
+executed on 𝐇𝜃 to obtain the m-hop global embedding 𝐇𝑔𝑙𝑜𝑏𝑎𝑙
+                                                     𝜃
+                                                            , which is then added to 𝐇𝜃 to get final embedding H.
+
+
+both the backbone network and the projector are structured as single-                   the different outcomes produced by utilizing dissimilar weights to
+layer MLP. However, experimental findings suggest that optimizing the                   amalgamate various hop message passing views. In general, we conduct
+number of layers within the projector can potentially amplify the node                  k-hop message passing on the original graph  = {𝐗, 𝐀}, resulting in
+representations in certain datasets, as demonstrated in the successful                  𝑘 = {𝐗𝑘 , 𝐀}. Subsequently, 𝐗𝑘 is inputted to the trained encoder 𝐟𝜃 to
+implementation of SimCLR [29]. In addition, the aggregation head                        acquire node representation:
+employs a form of learnable linear aggregation to merge the charac-
+                                                                                        𝐇𝜃 = 𝐟𝜃 (𝐗𝑘 ).                                                                (4)
+teristics of individual nodes based on a defined set of parameters. This
+process empowers a singular node to preserve more comprehensive                             Furthermore, the message passing performed prior to encoder input
+semantic information, thus enhancing the overall capability of the                      is synonymous with the message passing procedure of GCN. Following
+model to learn effectively. The method being employed provides a                        the attainment of the model output embedding, a common method in
+notable level of scalability and adaptability. It allows for the potential              decoupled GCN is using fixed steps to propagate the acquired features
+adjustment of the output dimension of the aggregation head in antic-                    on the graph to aggregate information from multi-hop neighborhoods.
+ipation of accommodating multi-classification tasks should the scope                    This effectively expands the message passing range, leading to im-
+of group discrimination expand to encompass discrimination among                        proved model output embedding. This methodology is denoted as:
+several groups.
+    GGD [13] has proved that it is possible to convert general con-                     𝐇𝑔𝑙𝑜𝑏𝑎𝑙 = 𝐀𝑚 𝐇𝜃 ,                                                             (5)
+                                                                                         𝜃
+trastive learning tasks into binary classification tasks. By acquiring the
+2𝑁 ∗ 1 predictions for two sets of nodes, we apply the Binary Cross-                    where 𝐇𝑔𝑙𝑜𝑏𝑎𝑙
+                                                                                               𝜃
+                                                                                                      is the m-hop global embedding of graph . The selected
+Entropy (BCE) loss function to classify a total of 2𝑁 nodes in two                      value for parameter 𝑚 is fixed to 10 in our model. The ultimate
+groups as positive and negative with corresponding labels of 1 and 0,                   embedding is attained via
+respectively. The loss for the group discrimination can be articulated
+                                                                                        𝐇 = 𝐇𝑔𝑙𝑜𝑏𝑎𝑙
+                                                                                             𝜃
+                                                                                                    + 𝐇𝜃 ,                                                            (6)
+as follows:
+                                                                                        which can be utilized for downstream tasks. In Section 4.4, the in-
+             1 ∑
+                 2𝑁
+𝐵𝐶𝐸 = −       ( 𝑦 log 𝑦̂𝑖 + (1 − 𝑦𝑖 ) log(1 − 𝑦̂𝑖 )),                        (2)       clusion of ablation experiments serves to demonstrate the efficacy of
+            2𝑁 𝑖=1 𝑖
+                                                                                        this operation in enhancing the quality of the produced model output
+where 𝑦𝑖 = 1 or 𝑦𝑖 = 0 is the label of the node 𝑖 and 𝑦̂𝑖 is the prediction             embedding.
+of the node 𝑖.
+                                                                                        3.6. Algorithm
+3.5. Inference
+                                                                                            We have summarized the overall procedure of DGD in Algorithm 1.
+                                                                                            Specifically, we first conduct augmentation on 𝐗 to obtain ̂        𝐗. When
+    The inference of DGD is presented in Fig. 3. DGD involves the
+                                                                                        partial corruption strategy is applied, we can obtain 𝐗̃ 𝑝1 , 𝐗̃ 𝑝2 and 𝐗̂ 𝑝
+execution of message passing before feature transformation wherein
+                                                                                        according to the message passing view in model training. Then, we
+the original node features are put into the trained encoder following
+                                                                                        merge 𝐗̃ 𝑝1 and 𝐗̃ 𝑝2 to obtain 𝐗̃ 𝑝 . In the encoding phase, we feed 𝐗̂ 𝑝
+message passing. We perform message passing adhering to the rule
+                                                                                        and 𝐗̃ 𝑝 to MLP encoder 𝑓𝜃 (⋅) and projector 𝑝𝜃 (⋅) to generate embeddings
+as:                                                                                     ̂𝐒𝜃 for positive samples and ̃𝐒𝜃 for negative samples. After that, we
+𝐗𝑘 = (𝐀 + 𝐈)𝑘 𝐗0 ,                                                            (3)       concatenate 𝐒̂ 𝜃 and 𝐒̃ 𝜃 to obtain 𝐒̄ 𝜃 , and then we input 𝐒̄ 𝜃 to aggregation
+                                                                                        head ℎ𝜃 (⋅) to obtain the prediction vector 𝐲̂ 𝜃 . The prediction vector 𝐲̂ 𝜃 is
+where 𝑘 = 1, 2, 3. . . etc and 𝐗0 is original attribute matrix. The optimal             a 2𝑁 dimension vector, which can be used for calculating the loss with
+selection of the parameter 𝑘 is contingent upon the unique charac-                      a 𝐵𝐶𝐸 loss. Finally, based on the calculated loss, trainable parameters
+teristics of the graph dataset. Opting for either an excessively small                  in 𝑓𝜃 (⋅), 𝑝𝜃 (⋅) and ℎ𝜃 (⋅) can be updated. This training process will
+or overly large 𝑘 value can compromise the model’s effectiveness. In                    continue iteratively until we reach the predefined number of epochs 𝑇 .
+situations where the graph consists of a substantial number of nodes,                   When the training process is completed, we freeze the 𝑓𝜃 (⋅) and feed the
+it is advisable to choose a larger 𝑘 value. Larger graphs necessitate                   inference view 𝐗𝑘 to MLP encoder 𝑓𝜃 (⋅) to obtain the local embedding
+that the nodes communicate with a broader array of remote nodes to                      𝐇𝜃 . Then, we obtain global embedding 𝐇𝑔𝑙𝑜𝑏𝑎𝑙   𝜃
+                                                                                                                                               = 𝐀10 𝐇𝜃 . Finally, we
+acquire adequate global information, thereby justifying the need for a                  obtain final embedding for downstream tasks 𝐇 = 𝐇𝑔𝑙𝑜𝑏𝑎𝑙         + 𝐇𝜃 .
+                                                                                                                                                  𝜃
+higher 𝑘 value. The essence concept underlying the message passing                          In DGD framework, the time complexity for the aggregation of a
+view in model inference involves the combination of the 𝑘+1 hops view                   single node is denoted as 𝑂(𝐷′ ) prior to conducting loss computation.
+{𝐗0 , 𝐀𝐗0 , 𝐀2 𝐗0 ,. . . , 𝐀𝑘 𝐗0 }, with each view assigning weights based              On the other hand, when aggregating total two groups of nodes, the
+on binomial coefficients. In this manner, we intend to blend diverse                    time complexity extends to 𝑂(2𝑁𝐷′ ). The time complexity of the BCE
+hop message passing views for all encompassing consideration of the                     loss for loss computation can be expressed as 𝑂(2𝑁) for all nodes
+graph data. Our formula emphasizes low weighting on high-order or                       within the positive and negative groups, given that the aggregated node
+low-order hop views, while high weighting is granted to intermediate                    embeddings are scalar values. In conclusion, the time complexity of
+hop views. This is due to the fact that when the graph is sufficiently                  DGD’s contrastive learning can be expressed as 𝑂(2𝑁𝐷′ +2𝑁). The BCE
+large, low-order hop views are restricted by local information with                     loss effectively moves away from the pairwise comparison of positive
+almost no global information in play, while nodes in high-order hop                     and negative groups of nodes, leading to enhanced computational
+views can be exceedingly smooth. In Section 4.5.3, we investigate                       efficiency.
+
+                                                                                    5
+Y. Gao et al.                                                                                                                             Neurocomputing 596 (2024) 127952
+
+
+Algorithm 1: The Overall Procedure of DGD                                           Table 2
+                                                                                    Parameter settings on seven datasets. ‘lr’ means the learning rate for model training.
+     Input      : Input node attribute matrix X ∈ R𝑁×𝐷 ; Normalized                 ‘hidden’ refers to the hidden size of DGD. ‘proj’ represents number of layers in projector.
+             adjacency matrix A ∈ R𝑁×𝑁 ; MLP encoder 𝑓𝜃 (⋅);                         Dataset                     lr          hidden        proj        𝛼          𝜆           k
+             Projector 𝑝𝜃 (⋅); Aggregation head ℎ𝜃 (⋅); Number of                    Cora                        1e-3        1024          1           0.2        0           2
+             training epochs 𝑇 ; Number of hidden dimensions 𝐷′ ;                    CiteSeer                    1e-5        1024          3           0.8        1           1
+             Partial corruption parameter 𝛼; hop 𝑛 and parameter 𝜆                   PubMed                      1e-3        1024          1           0.1        0           1
+             in the message passing view of model training; hop 𝑘                    Amazon Computers            1e-4        1024          1           0.8        1           4
+                                                                                     Amazon Photo                5e-4        1024          1           0.6        1           2
+             in the message passing view of inference;                               ogbn-arxiv                  5e-5        1500          1           –          1           5
+     Output: Final representation H                                                  ogbn-products               5e-5        1024          1           –          1           22
+ 1 //Training ;
+ 2 for 𝑡 = 1 to 𝑇 do                                                                Table 3
+ 3     Conduct node feature masking on X to get X;    ̂                             Model performance (i.e., accuracy) of the node classification on five small-scale datasets.
+            ̃      ̃           ̂                                                    Best performance for each dataset is in bold. Comp and Photo refer to Amazon
+ 4     Get X𝑝1 , X𝑝2 and X𝑝 according to Equation (1) in the
+                                                                                    Computers and Amazon Photos.
+         message passing view and partial corruption strategy in
+                                                                                     Method             Cora            CiteSeer      PubMed         Comp             Photo
+         Section 3.3;
+                 ̃ and X     ̃ to get X   ̃ ;                                        GCN [15]           81.5            70.3          79.0           76.3±0.5         87.3±1.0
+ 5     Merge X    𝑝1          𝑝2           𝑝                                         GAT [48]           83.0±0.7        72.5±0.7      79.0±0.3       79.3±1.1         86.2±1.5
+ 6     Input X𝑝 and X𝑝 to 𝑓𝜃 (⋅) and 𝑝𝜃 (⋅) to get embedding Ŝ 𝜃
+               ̂           ̃                                                         SGC [9]            81.0±0.0        71.9±0.1      78.9±0.0       74.4±0.1         86.4±0.0
+         = 𝑝𝜃 (𝑓𝜃 ( ̂X𝑝 )) and S̃ 𝜃 = 𝑝𝜃 (𝑓𝜃 (X
+                                              ̃ ));
+                                               𝑝
+                                                                                     CG3 [49]           83.4±0.7        73.6±0.8      80.2±0.8       79.9±0.6         89.4±0.5
+                                                    ′
+ 7     Concatenate ̂S𝜃 and ̃S𝜃 to get S̄ 𝜃 ∈ R2N×D and then input ̄S𝜃                DGI [26]           81.7±0.6        71.5±0.7      77.3±0.6       75.9±0.6         83.1±0.5
+                                                                                     GMI [50]           82.7±0.2        73.0±0.3      80.1±0.2       76.8±0.1         85.1±0.1
+         to ℎ𝜃 (⋅) to get ̂y𝜃 ;
+                                                                                     MVGRL [51]         82.9±0.7        72.6±0.7      79.4±0.3       79.0±0.6         87.3±0.3
+ 8     Calculate loss according to Equation (2);                                     GRACE [52]         80.0±0.4        71.7±0.6      79.5±1.1       71.8±0.4         81.8±1.0
+ 9     Update trainable parameters in 𝑓𝜃 (⋅), 𝑝𝜃 (⋅) and ℎ𝜃 (⋅);                     GCA [10]           80.5±0.5        71.3±0.4      78.6±0.6       88.9±0.2         91.4±1.0
+                                                                                     BGRL [53]          80.5±1.0        71.0±1.2      79.5±0.6       89.2±0.9         91.2±0.8
+10 //Inference;
+                                                                                     GBT [54]           81.0±0.5        70.8±0.2      79.0±0.1       88.5±1.0         91.1±0.7
+11 Get X𝑘 according to Equation (3) in the inference view;                           GGD [13]           83.9±0.4        73.0±0.6      81.3±0.8       90.1±0.9         92.5±0.6
+12 Get local embedding according to Equation (4);
+                                                                                     DGD                85.2±0.3        74.1±0.7      83.5±0.5       90.6±0.3         94.6±0.3
+13 Get global embedding according to Equation (5);
+14 Get final embedding for downstream tasks according to
+    Equation (6);
+                                                                                    final node representation 𝐇 is utilized to train a logistic regression
+                                                                                    classifier, which is then applied to each dataset in order to determine its
+Table 1                                                                             classification accuracy. To ensure reliability of the results, we averaged
+The statistics of seven benchmark datasets.
+                                                                                    classification accuracy across 50 experimental trials and used standard
+ Dataset                   Nodes              Edges        Features   Classes
+                                                                                    deviation for evaluation of model performance. In terms of the training
+ Cora                      2,708              5,429        1,433      7             time and memory consumption, we compared DGD with other methods
+ CiteSeer                  3,327              4,732        3,703      6
+                                                                                    by evaluating the training time and memory consumption required for
+ PubMed                    19,717             44,338       500        3
+ Amazon Computers          13,752             245,861      767        10            one epoch. It is acknowledged that DGD necessitates additional time for
+ Amazon Photos             7,650              119,081      745        8             two message passing calculations during the inference; however, this is
+ ogbn-arxiv                169,343            1,166,243    128        40            deemed acceptable in the comparison to the inevitable iterative calcula-
+ ogbn-products             2,449,029          61,859,140   100        47
+                                                                                    tions required during model training across multiple epochs. Therefore,
+                                                                                    the time associated with the inference has been listed separately in
+                                                                                    Section 4.6 and has not been included in the model evaluation.
+4. Experiments                                                                          Baseline. In this study, we conducted a comparative analysis of
+                                                                                    DGD against 12 baseline methods on five small-scale datasets. These
+4.1. Experiment settings                                                            included four supervised GNNs, namely GCN [15], GAT [48], SGC [9],
+                                                                                    CG3 [49], and eight advanced GCL methods, namely DGI [26], GMI
+    Dataset. The efficacy of our model is measured using a total of                 [50], MVGRL [51], GRACE [52], GCA [10], BGRL [53], GBT [54]
+seven benchmark datasets, comprising five small-scale datasets, namely              and GGD [13]. The data segmentation used for Cora, CiteSeer, and
+Cora, CiteSeer, PubMed [45], Amazon Computers, and Amazon Pho-                      PubMed was the same as that employed in a previous study [55]. For
+tos [46], as well as two large-scale datasets, namely ogbn-arxiv and                Amazon Computers and Amazon Photos, we utilized semi-supervised
+ogbn-products [47]. Relevant statistics pertaining to each of these                 experimental settings and randomly assigned 10/10/80% of data to
+datasets can be found in Table 1.                                                   training/validation/testing sets respectively. For ogbn-arxiv, we com-
+    Experiment Settings. A single-layered MLP was implemented as                    pared DGD with four self-supervised baselines (DGI [26], GRACE [52],
+the encoder 𝐟𝜃 across all datasets. For usage of projector, with an                 GBT [54], and GGD [13]), while BGRL [53], GBT [54], and GGD [13]
+aim to save computational time on various datasets, we minimize the                 were selected for the comparison of ogbn-products. Moreover, our com-
+number of projector layer. The present tabular representation outlines              parative analysis also comprised results from MLP, Node2vec [24], and
+the fundamental parameter settings of seven benchmark datasets, in the              supervised GCN [15], as originally proposed in a previous work [47].
+context of our experimentation. Our study primarily concentrates on                 Certain baseline results reported in this study were obtained from prior
+fine-tuning six specific parameters for DGD, namely the learning rate,              research papers [13,44,49].
+the hidden size, the number of projector layers, the partial corruption
+parameter 𝛼, the self-node information weight 𝜆 and the hop 𝑘 in                    4.2. Evaluating on small-scale datasets
+the view of model inference. The individual parameter configurations
+adopted for each dataset are explicitly delineated beneath (see Table 2).               The present study evaluates the classification accuracy and compu-
+    Evaluation. The present study involves conducting an evaluation                 tational efficiency of a model on five small-scale datasets. To determine
+of our self-supervised model by means of node classification tasks. The             the optimal state of the model, we retained the partial corruption and
+
+                                                                                6
+Y. Gao et al.                                                                                                                              Neurocomputing 596 (2024) 127952
+
+Table 4                                                                                 Table 6
+Comparison of training time per epoch in seconds of DGD and other methods on five       Node classification result and efficiency comparison on ogbn-products. Number after ∖
+datasets.                                                                               means the hidden size of GGD [13] and DGD.
+ Method             Cora        CiteSeer       PubMed        Comp         Photo          Method                      Accuracy (%)    Memory      Time         Total
+ MVGRL [51]         0.123       0.171          0.488         0.663        0.468          Supervised GCN [15]         75.6±0.2        –           –            –
+ GRACE [52]         0.056       0.092          0.893         0.546        0.203
+                                                                                         MLP                         61.1±0.0        –           –            –
+ BGRL [53]          0.085       0.094          0.147         0.337        0.273
+                                                                                         Node2vec [24]               68.8±0.0        –           –            –
+ GBT [54]           0.073       0.072          0.103         0.492        0.173
+ GGD [13]           0.017       0.019          0.017         0.017        0.016          BGRL [53] (100 epochs)      64.0±1.6        29,303MB    53 m 16 s    5,326 m 40 s
+                                                                                         GBT [54] (100 epochs)       70.5±0.4        20,419MB    48 m 38 s    4,863 m 20 s
+ DGD                0.013       0.016          0.015         0.017        0.014
+                                                                                         GGD [13] (1 epoch∖1024)     75.7±0.4        4,391MB     12 m 46 s    12 m 46 s
+                                                                                         DGD (1 epoch∖256)           77.4±0.2        1193MB      1 m 2 s      1 m 2 s
+Table 5
+Node classification result and efficiency comparison on ogbn-arxiv. ‘Time’ means
+training time per epoch (in seconds). ‘Total’ is total training time.
+ Method                        Accuracy (%)     Memory         Time       Total         available by OGB [47]. As for DGD, it employs a full-neighborhood
+ Supervised GCN [15]           71.7±0.3         –              –          –             sampling strategy, whereby all one-hop neighbor subgraphs are sam-
+                                                                                        pled for a fixed number of nodes per batch, attaining one-hop message
+ MLP                           55.5±0.2         –              –          –
+ Node2vec [24]                 70.1±0.1         –              –          –             passing on each subgraph for said batch of nodes. Because of the
+ DGI [26]                      70.3±0.2         –              –          –
+                                                                                        comparison on large-scale datasets, to be fair, DGD abstains from uti-
+ GRACE [52] (10k epochs)       71.5±0.1         –              –          –             lizing the partial corruption strategy and the aggregation head on both
+ GBT [54] (300 epochs)         70.1±0.2         14,959MB       6.47       1,941         ogbn-arxiv and ogbn-products, instead deploying the same corruption
+ GGD [13] (1 epoch)            71.6±0.5         4513MB         0.18       0.18          method and summation aggregation as GGD [13].
+ DGD (1 epoch)                 71.8±0.1         2914MB         0.025      0.025             Tables 5 and 6 present the experimental findings, which demon-
+                                                                                        strate that DGD has achieved a state-of-the-art classification accuracy
+                                                                                        with a mere one epoch of training. This indicates that DGD holds
+                                                                                        superiority in terms of convergence speed due to its ability to achieve
+aggregation head components in the comparison of accuracy. To es-
+                                                                                        effective training within only one epoch. The experimental results show
+tablish comparability with respect to time and memory, GGD [13] and
+                                                                                        that DGD achieves optimal performance levels during the initial epoch
+DGD were reproduced based on the same parameter settings provided
+                                                                                        and maintains stable performance with increased epochs. However,
+in [13]. In order to maintain consistency of two models, we kept the
+                                                                                        BGRL [53] and GBT [54] necessitate a notably higher number of epochs
+identical number of projector layers and sum up each node feature
+                                                                                        for incremental enhancement of their performance. GGD [13] and
+instead of using the aggregation head.
+                                                                                        DGD exhibit significantly accelerated convergence in comparison to
+    Accuracy. Table 3 presents the classification outcomes for five
+                                                                                        GCL baselines, facilitated by the utilization of the grouping contrastive
+small-scale datasets. The findings demonstrate that DGD outperforms
+                                                                                        learning. The reason behind this result could be attributed to the
+both supervised GNN and other contemporary GCL baselines across all
+                                                                                        emphasis of grouping-based techniques on the overall edge distribu-
+datasets with respect to accuracy. When compared to the suboptimal
+                                                                                        tion patterns within graphs, rather than on specific characteristics of
+method, DGD exhibited a significantly better performance on diverse
+                                                                                        individual nodes. Inversely, during the training process, conventional
+datasets. Particularly, the advancements observed in Cora, Citeseer,
+                                                                                        GCL methods may encounter challenges in achieving convergence ef-
+Pubmed, and Amazon Photos datasets ranged from one to two points,
+                                                                                        ficiency due to the potential diversion caused by an excessive focus
+while there was a 0.5 point growth in the case of Amazon Computers.
+                                                                                        on node-specific details. Notably, it is worth highlighting that DGD
+The best classification accuracy attests to DGD’s superiority and efficacy
+in generating high-quality node representations.                                        requires only a 256-dimensional embedding on ogbn-products, while
+    Time and Memory. GGD [13] has demonstrated that the group                           surpassing GGD [13]’s 1024-dimensional embedding for two points.
+discrimination framework experiences a significant increase in train-                   DGD’s inherent superiority is attributed to the strategy of sampling all
+ing time(3 to 70 times faster) and memory utilization(save 10 to                        one-hop neighbors of batch nodes, along with our message passing and
+80 percent) as compared to the traditional GCL method. In order to                      feature transformation separation framework. By generating subgraphs
+conduct a fair time and memory comparison experiment, we have                           with smaller memory usage, DGD achieves the more complete message
+reproduced these two models utilizing the same parameter settings as                    passing and better performance.
+in the aforementioned study. As is evident from Table 4, our results                        In regards to the computational efficiency, DGD outperforms other
+indicate that DGD is almost equivalent to the baseline and corroborates                 self-supervised baselines in terms of the training time and memory
+with intuitive understanding. It is worth noting that for small-scale                   consumption. Specifically, DGD demonstrates a faster training speed
+datasets, the one-layer GCN applied in the baseline model is analogous                  than GGD [13]. In the context of the ogbn-arxiv, DGD achieves signif-
+to DGD’s one-hop message passing plus a single-layer MLP. Should                        icant memory savings of approximately 35% compared to GGD [13],
+GGD [13] incorporate more than one layer of GCN for certain datasets,                   with a training speed that is 7 times faster per epoch. Similarly, on
+DGD would benefit from significant advantages in terms of time and                      the ogbn-products, DGD attains a noteworthy memory reduction of
+memory efficiency. Our success is largely attributed to our use of                      approximately 70%, with a training speed that is 12 times faster per
+MLP as the backbone network, which eliminates parameter inclusion                       epoch. These observations are attributed to GGD [13] employing mul-
+in message passing and thus reduces redundant linear transformations                    tiple layers of GCN, while DGD employs a separated one-hop message
+relative to GCN. It should be noted that our computation time and                       passing on these two large-scale datasets.
+memory consumption results include additional calculations due to the
+message passing performed on three node attribute matrices in each                      4.4. Ablation study
+epoch in the implementation of DGD.
+                                                                                            An ablation study was conducted on different modules of DGD to
+4.3. Evaluating on large-scale datasets                                                 determine their effectiveness when implemented separately. It carried
+                                                                                        out under the same hyperparameter settings across five datasets and the
+   The present study evaluates the performance of DGD in terms of                       classification accuracy results were averaged across 50 experimental
+both classification accuracy and computational efficiency on two large-                 trials. Table 7 presents the outcomes of the study, which demonstrate
+scale datasets, namely ogbn-arxiv and ogbn-products, which were made                    that all designed modules contribute to the performance of DGD.
+
+                                                                                    7
+Y. Gao et al.                                                                                                                                 Neurocomputing 596 (2024) 127952
+
+Table 7                                                                                    Table 8
+Ablation Study for DGD. DGD𝑤∕𝑜 𝑝 means DGD uses the aggregation head without the           Different values of 𝜆 in the message passing view of model training on two small-scale
+partial corruption strategy. DGD𝑤∕𝑜 𝑎 means DGD uses the partial corruption strategy       datasets. ‘Comp’ means Amazon Computers.
+without the aggregation head. DGD𝑤∕𝑜 𝑝&𝑎 refers to DGD uses neither the partial             Dataset    𝜆 = 0        𝜆 = 0.5      𝜆 = 1       𝜆 = 1.5      𝜆 = 2       𝜆 = 3
+corruption strategy nor aggregation head. DGD𝑤∕𝑜 𝑝&𝑎&𝑔 represents DGD uses no global
+embedding calculation added in the model inference on the basis of DGD𝑤∕𝑜 𝑝&𝑎 .             Cora       84.5±0.7     84.7±0.7     84.5±0.5    84.4±0.9     84.3±0.5    84.1±0.7
+                                                                                            Comp       90.1±0.3     90.1±0.4     90.4±0.3    90.3±0.2     90.0±0.4    90.0±0.3
+ Method            Cora         CiteSeer      PubMed       Comp          Photo
+ DGD𝑤∕𝑜 𝑝          84.4±0.5     73.7±0.7      83.2±0.5     90.6±0.4      94.5 ±0.3
+ DGD𝑤∕𝑜 𝑎          84.7±0.6     73.9±0.8      82.8±0.4     90.3±0.3      94.4 ±0.3
+ DGD𝑤∕𝑜 𝑝&𝑎        84.6±0.6     73.6±0.7      82.5±0.4     90.3±0.3      94.4±0.3          𝐗𝑛 = 𝐀𝑛 𝐗0 is identified as the message passing view commonly utilized
+ DGD𝑤∕𝑜 𝑝&𝑎&𝑔      83.0±0.8     73.0±0.7      80.4±0.8     90.3±0.3      94.1±0.4
+                                                                                           in decoupled GCN. Furthermore, 𝐀 denotes the normalized adjacency
+ DGD               85.2±0.3     74.1±0.7      83.5±0.5     90.6±0.3      94.6±0.3
+                                                                                           matrix while 𝐗0 represents the augmented node attribute matrix. Last,
+                                                                                           𝐗𝑛 refers to the node attribute matrix following n-hop message passing.
+                                                                                           Adhering to the notion of above message passing view, our approach
+4.4.1. Effectiveness of partial corruption strategy and aggregation head                   incorporates residual connections, assimilating node attributes from the
+     As it is shown in Table 7, the partial corruption strategy is found                   previous hop into those of the current hop, denoted as
+to improve or maintain accuracy on all datasets, thus validating its                       𝐗1 = 𝐀𝐗0 + 𝐗0
+efficacy. Notably, the use of the aggregation head alone results in
+                                                                                              = (𝐀 + 𝐈)𝐗0 ,
+reduced accuracy on the Cora dataset, but improve performance on
+other datasets. This observation is potentially due to overfitting issues                  𝐗2 = 𝐀𝐗1 + 𝐗1
+                                                                                                                                                                              (7)
+prevalent in smaller datasets such as Cora. Importantly, the amalga-                          = (𝐀 + 𝐈)𝐗1
+mation of partial corruption strategy with aggregation head results in
+                                                                                              = (𝐀 + 𝐈)2 𝐗0 ,
+a noteworthy enhancement and achieves the best accuracy across all
+datasets. Conversely, disabling both the aggregation head and partial                      𝐗𝑛 = (𝐀 + 𝐈)𝑛 𝐗0 .
+corruption strategy results in the worst accuracy scores across all                        In the context of information exchange among graph nodes, different
+datasets.                                                                                  nodes may possess dissimilar information needs, necessitating the in-
+     The efficacy of the two proposed modules is thoroughly validated                      clusion of a parameter, 𝜆, to regulate the significance of supplementary
+by the experimental outcomes, affirming their potential to enhance the                     information transferred from the node to itself. This can be elucidated
+model’s performance both individually and in tandem. Furthermore, it                       as
+is worth noting that the simultaneous operation of these two modules
+                                                                                           𝐗𝑛 = (𝐀 + 𝜆𝐈)𝑛 𝐗0 .                                                                (8)
+leads to a more significant enhancement in the model’s effectiveness.
+It is our hypothesis that there exists a certain level of interdependence                      In pursuit of gaining insight into the impact of parameter 𝑛 and
+between these two modules, as we have put forth in our proposition.                        𝜆, we performed experiments on two small-scale datasets, specifically
+We postulate that partial corruption alters the complexity of model                        Cora and Amazon Computers. The results obtained were based on an
+learning, thereby facilitating the acquisition of more relevant informa-                   average accuracy value, derived from 10 separate trials. Notably, the
+tion that can be effectively aggregated by parameterized linear layers.                    partial corruption strategy and the aggregation head were not utilized
+So by utilizing an aggregation head, the model is able to acquire and                      in this experimental process, with all other settings being held constant,
+retain the supplementary semantic information of the nodes that is                         and only a single hyperparameter was varied.
+obtained through the partial corruption strategy. Simple summation                             The experimental findings are presented in Tables 8 and 9. The
+fails to retain the supplementary acquired knowledge. It is important                      results suggest that suitable values of 𝜆 and 𝑛 vary across different
+to highlight that the incorporation of the partial corruption strategy is                  datasets. The effectiveness of smaller 𝜆 values surpasses that of larger
+grounded in the decoupled GCN approach, thereby ensuring a top-down                        values in both datasets. However, the model does not exhibit sensitivity
+and cohesive nature of our model.                                                          to 𝜆 in smaller values. Hence, we speculate that the triumph of the
+                                                                                           model does not solely rely on the selection of a multi-specific 𝜆. The
+4.4.2. Effectiveness of global embedding calculation                                       value of 𝜆 that is comparatively diminutive would be deemed fitting
+    Table 7 demonstrates that removing the global embedding calcu-                         in our model. As such, we offer 𝜆 values of 0 and 1. The 𝜆 value of 0
+lation during model inference leads to the poorest accuracy scores                         indicates that the node will not receive any additional information from
+                                                                                           itself during message passing. Alternatively, the 𝜆 value of 1 features a
+across all datasets. Consequently, conducting the computation of global
+                                                                                           residual connection where the node attributes of the previous hop are
+embedding during the inference holds immense significance. This pro-
+                                                                                           appended to the node attributes of the current hop.
+cess substantially expands the reach of message passing and enhances
+                                                                                               Regarding the optimal value of parameter 𝑛, it has been observed
+the overall quality of the model’s output embedding. As a result,
+                                                                                           that on Cora dataset, increasing the value of 𝑛 leads to a detrimen-
+downstream tasks can make better use of this improved embedding.
+                                                                                           tal impact on the model’s effectiveness and computational resources.
+    We have conducted comprehensive experiments to ascertain the
+                                                                                           Similarly, on Amazon Computers, augmenting 𝑛 does not yield any
+impact of 𝛼 on various datasets in Section 4.5.2, which can be employed
+                                                                                           discernible improvement in model efficacy. A plausible explanation
+as a reliable source for selecting 𝛼 and comprehending the function of
+                                                                                           for these divergent outcomes is offered by the distinct characteristics
+the aggregation head.
+                                                                                           of the decoupled GCN applied in our self-supervised model. In tradi-
+                                                                                           tional decoupled GCN frameworks, the node attributes entering neural
+4.5. Hyperparameter analysis                                                               network training necessitate various of hop views and their intricate
+                                                                                           combination. However, DGD achieves commendable outcomes with
+   In this section, we analyze some hyperparameters in the model and                       only one or two hop message passing. Self-supervised model usually
+do some supplementary experiments to verify the effectiveness of our                       derives information by uncovering relationships between diverse data
+designs.                                                                                   elements. This may mitigate the reliance of our model on the specific
+                                                                                           message passing view. Therefore, we proposed selecting 𝑛 fixed as 1 in
+4.5.1. Analysis for message passing view in model training                                 our investigation.
+   The concept of residual connections has been implemented in the                             Based on our aforementioned experiments and subsequent analysis,
+computation of the message passing view in our study. Specifically,                        it can be inferred that utilizing the decoupled GCN approach within a
+
+                                                                                       8
+Y. Gao et al.                                                                                                                              Neurocomputing 596 (2024) 127952
+
+
+
+
+Fig. 4. Different values of 𝛼 in model training on Cora. Cora𝑤∕𝑜 ℎ represents a model that does not incorporate an aggregation head. Cora𝑤∕ ℎ pertains to a model in which an
+aggregation head has been implemented.
+
+
+
+
+                                                           Fig. 5. Different values of 𝛼 in model training on Citeseer.
+
+
+Table 9                                                                                      results in a discernible improvement, or at the very least, sustained
+Different values of 𝑛 in the message passing view of model training on two small-scale
+                                                                                             performance, as contrasted to the non-utilization of the aggregation
+datasets.
+                                                                                             head across all 𝛼 values within every dataset. These findings corrob-
+ Dataset           n = 1              n = 2             n = 3              n = 4
+                                                                                             orate our proposal that the aggregation head has the ability to acquire
+ Cora              84.5±0.7           83.8±0.5          83.5±0.4           83.1±0.6
+ Comp              90.2±0.4           90.4±0.3          90.1±0.4           90.1±0.3
+                                                                                             supplementary knowledge from the partial corruption strategy.
+                                                                                                 Regarding 𝛼, it is observed that differing datasets exhibit vary-
+                                                                                             ing degrees of relatively superior 𝛼. 𝛼 display minimal sensitivity in
+                                                                                             medium-scale datasets such as Amazon Computers and Amazon Photos,
+self-supervised model is distinctive in that it is not contingent upon the                   whereas it is comparatively more sensitive in small-scale datasets like
+intricacy of the message passing view. Rather, the fundamental factor                        Cora, Citeseer and PubMed, which is to be expected. Smaller graphs
+is the pretext task that is devised by the model to extract pertinent                        allow for the selective corruption of key structural through partial
+features from the data. Thus, solely the elected message passing view                        corruption strategy, hence leading to significant alterations in results
+is implemented as a guiding principle for data processing within our
+                                                                                             pursuant to varying cutting methods. Notably, on various datasets, cer-
+framework. Notably, efficacy is prioritized throughout the system.
+                                                                                             tain 𝛼 values have been known to impair model performance, as their
+4.5.2. Analysis for partial corruption and aggregation head                                  implementation may change the complexity of model training, resulting
+   The present study conducted an investigation into various values                          in models being either too facile or strenuous to learn. Therefore, the
+of 𝛼 ranging from 0.1 to 0.9, with a step size of 0.2 on five small-                         employment of 𝛼 acts as a means of regulating the difficulty of model
+scale datasets. The outcome of the experiment was determined based                           learning so as to leverage the group discrimination framework to its
+on an averaged accuracy approach, repeating the process ten times. The                       full potential. Furthermore, our framework’s decoupling of GCN from
+resulting outcomes are presented in Figs. 4, 5, 6, 7, and 8.                                 the message passing and feature transformation enables advantages in
+   Based on the obtained results, the ensuing information has been                           utilizing the corruption strategy. Finally, if GCN is used as the backbone
+derived. Specifically, the utilization of a learnable aggregation head                       network, the partial corruption strategy cannot be executed.
+
+                                                                                         9
+Y. Gao et al.                                                                          Neurocomputing 596 (2024) 127952
+
+
+
+
+                     Fig. 6. Different values of 𝛼 in model training on Pubmed.
+
+
+
+
+                Fig. 7. Different values of 𝛼 in model training on Amazon Computers.
+
+
+
+
+                 Fig. 8. Different values of 𝛼 in model training on Amazon Photos.
+
+
+
+                                                10
+Y. Gao et al.                                                                                                                                 Neurocomputing 596 (2024) 127952
+
+
+
+
+                                                       Fig. 9. Different values of 𝑘 in model inference on three datasets.
+
+
+
+
+Fig. 10. The utilization of variable weights in the combination of the message passing view in model inference on four datasets. ‘First’ and ‘Last’ refer to the one hop view and
+the highest hop view, respectively.
+
+
+4.5.3. Supplementary experiments for message passing view in model infer-                   then, we subsequently opted to employ different weight combina-
+ence                                                                                        tion methodologies for comparative assessment purposes, such as the
+    Through supplementary experiments on the Cora, Amazon Com-                              summation of each hop views, only the first hop view, and solely
+puters, and ogbn-arxiv datasets, we have explored the varying values                        the last hop view. Supplementary experiments on datasets of Cora,
+of the 𝑘 of the message passing view in model inference. Of the five                        Amazon Computers, Amazon Photos and ogbn-arxiv were also carried
+small-scale datasets, Cora and Amazon Computers are characterized                           out, wherein the partial corruption strategy and aggregation head were
+by the least and most number of nodes and edges, respectively, while                        not utilized, and all parameters remained unchanged. The experimental
+ogbn-arxiv represents a large-scale dataset. The aforementioned exper-                      outcome was determined by the average accuracy of 10 trials.
+iments involved the exclusion of both the partial corruption strategy                           The empirical outcomes presented in Fig. 10 offer clear evidence
+and aggregation head, while holding all other parameters constant.                          of the exceptional efficacy of the proposed message passing view in
+The experimental results were averaged across 10 trials, yielding the                       the stage of inference, as well as the soundness of our proposed theory
+reported average accuracy.                                                                  regarding the weighted amalgamation of multifarious hop views. Our
+    It is evident from Fig. 9 that optimal values of 𝑘 are dependent                        approach, which employs a straightforward form, garners unparalleled
+on the specific dataset being analyzed. The model’s efficacy may be                         results.
+compromised by selecting 𝑘 values that are either too small or too
+large. Generally, graphs with a greater number of nodes and greater                         4.6. Time for model inference
+node density necessitate the selection of a larger 𝑘. This correlation
+is intuitive, as a larger graph requires more extensive communication                          On the dataset of ogbn-product, the full graph message-passing
+between distant nodes to capture sufficient global information.                             process cannot be implemented on NVIDIA GeForce RTX 3070 Laptop
+    In addition, we undertook an investigation into the various weights                     GPU. Thus, our investigation solely focuses on assessing the temporal
+utilized for combining each hop message passing view during model                           resources invested in model inference involving six distinct datasets
+inference. Initially, we implemented binomial coefficients in our model;                    namely Cora, Citeseer, Pubmed, Amazon Computers, Amazon Photos
+
+                                                                                       11
+Y. Gao et al.                                                                                                                        Neurocomputing 596 (2024) 127952
+
+Table 10                                                                           References
+Time for model inference in seconds on six benchmark datasets.
+ Cora           Citeseer      PubMed          Comp           Photo   arxiv          [1] Hao Peng, Ruitong Zhang, Shaoning Li, Yuwei Cao, Shirui Pan, S. Yu Philip,
+ 1e-2           1.2e-2        1e-2            1.9e-2         1e-2    3.7e-2             Reinforced, incremental and cross-lingual event detection from social messages,
+                                                                                        IEEE Trans. Pattern Anal. Mach. Intell. 45 (1) (2022) 980–998.
+                                                                                    [2] Huanhuan Yuan, Jian Yang, Jiajin Huang, Improving hypergraph convolution
+                                                                                        network collaborative filtering with feature crossing and contrastive learning,
+                                                                                        Appl. Intell. (2022) 1–14.
+and ogbn-arxiv. In order to conduct the evaluation, we have standard-
+                                                                                    [3] Mathias Niepert, Mohamed Ahmed, Konstantin Kutzkov, Learning convolutional
+ized the hidden size of 𝐇𝜃 to 256, and the value of 𝑚 has been fixed to                 neural networks for graphs, in: International Conference on Machine Learning,
+10 for all datasets. Detailed outcomes of the experiment are presented                  PMLR, 2016, pp. 2014–2023.
+below.                                                                              [4] Xiaowei Zhang, Quan Fang, Jun Hu, Shengsheng Qian, Changsheng Xu, TCKGE:
+    The time required for completing the twice message passing and                      Transformers with contrastive learning for knowledge graph embedding, Int. J.
+attribute matrix passing through MLP is reflected in Table 10. The                      Multimed. Inform. Retriev. 11 (4) (2022) 589–597.
+                                                                                    [5] Yaochen Xie, Zhao Xu, Jingtun Zhang, Zhengyang Wang, Shuiwang Ji, Self-
+inference time is observed to be comparable to that of the training time
+                                                                                        supervised learning of graph neural networks: A unified review, IEEE Trans.
+for a single epoch of the model. This indicates that the efficiency of the              Pattern Anal. Mach. Intell. 45 (2) (2022) 2412–2429.
+approach is acceptable.                                                             [6] Chao Li, Xinming Liu, Yeyu Yan, Zhongying Zhao, Qingtian Zeng, HetGNN-SF:
+    It is pertinent to observe that during the model inference, the first               Self-supervised learning on heterogeneous graph neural network via semantic
+time message passing operates on the original node attribute matrix.                    strength and feature similarity, Appl. Intell. (2023) 1–18.
+As a result, the node attribute matrix that is derived following the first          [7] Yuning You, Tianlong Chen, Yongduo Sui, Ting Chen, Zhangyang Wang, Yang
+                                                                                        Shen, Graph contrastive learning with augmentations, Adv. Neural Inf. Process.
+time message passing remains unaffected, irrespective of the model
+                                                                                        Syst. 33 (2020) 5812–5823.
+parameters utilized during training. This realization implies that the              [8] Runliang Tian, Hongmei Shi, Momentum memory contrastive learning for
+message passing calculation of the initial node attribute matrix can                    transfer-based few-shot classification, Appl. Intell. 53 (1) (2023) 864–878.
+be executed on remote servers, preserved, and subsequently reused.                  [9] Felix Wu, Amauri Souza, Tianyi Zhang, Christopher Fifty, Tao Yu, Kilian Wein-
+Although our findings include the time of this process, it is imperative                berger, Simplifying graph convolutional networks, in: International Conference
+                                                                                        on Machine Learning, PMLR, 2019, pp. 6861–6871.
+to evince its dispensability in practical applications.
+                                                                                   [10] Yanqiao Zhu, Yichen Xu, Feng Yu, Qiang Liu, Shu Wu, Liang Wang, Graph
+                                                                                        contrastive learning with adaptive augmentation, in: Proceedings of the Web
+5. Conclusion                                                                           Conference 2021, 2021, pp. 2069–2080.
+                                                                                   [11] Han Zhao, Xu Yang, Cheng Deng, Dacheng Tao, Unsupervised structure-adaptive
+    In this paper, we propose a graph self-supervised learning model                    graph contrastive learning, IEEE Trans. Neural Netw. Learn. Syst. (2023).
+called DGD. This work represents the attempt to apply the concept of               [12] Yixin Liu, Ming Jin, Shirui Pan, Chuan Zhou, Yu Zheng, Feng Xia, S. Yu Philip,
+decoupled GCN to contrastive learning frameworks. DGD eschews GCN                       Graph self-supervised learning: A survey, IEEE Trans. Knowl. Data Eng. 35 (6)
+                                                                                        (2022) 5879–5900.
+entirely, relying solely on a one-layer MLP encoder, thereby greatly
+                                                                                   [13] Yizhen Zheng, Shirui Pan, Vincent Lee, Yu Zheng, Philip S. Yu, Rethinking
+improving the training speed and reducing the memory overhead. Fur-                     and scaling up graph contrastive learning: An extremely efficient approach with
+thermore, a new negative sampling strategy termed partial corruption                    group discrimination, Adv. Neural Inf. Process. Syst. 35 (2022) 10809–10820.
+is introduced, which may be adapted to DGD to enhance the learning                 [14] Will Hamilton, Zhitao Ying, Jure Leskovec, Inductive representation learning on
+of complex graph structures by adjusting the level of difficulty of                     large graphs, Adv. Neural Inf. Process. Syst. 30 (2017).
+model training. In addition, a more effective method for aggregating               [15] Thomas N. Kipf, Max Welling, Semi-supervised classification with graph
+                                                                                        convolutional networks, 2016, arXiv preprint arXiv:1609.02907.
+single node information is put forward, preserving relatively complete
+                                                                                   [16] Ming Chen, Zhewei Wei, Zengfeng Huang, Bolin Ding, Yaliang Li, Simple and
+semantic information through a learnable parameter set. Empirical
+                                                                                        deep graph convolutional networks, in: International Conference on Machine
+results obtained from diverse node classification datasets demonstrate                  Learning, PMLR, 2020, pp. 1725–1735.
+that DGD outperforms existing state-of-the-art approaches in terms of              [17] Guohao Li, Matthias Muller, Ali Thabet, Bernard Ghanem, Deepgcns: Can gcns
+accuracy, training efficiency, and memory.                                              go as deep as CNNS? in: Proceedings of the IEEE/CVF International Conference
+                                                                                        on Computer Vision, 2019, pp. 9267–9276.
+CRediT authorship contribution statement                                           [18] Johannes Gasteiger, Stefan Weißenberger, Stephan Günnemann, Diffusion
+                                                                                        improves graph learning, Adv. Neural Inf. Process. Syst. 32 (2019).
+                                                                                   [19] Johannes Gasteiger, Aleksandar Bojchevski, Stephan Günnemann, Predict then
+   Yinjie Gao: Writing – review & editing, Writing – original draft,                    propagate: Graph neural networks meet personalized pagerank, 2018, arXiv
+Supervision, Methodology, Conceptualization. Yaxin Sun: Writing – re-                   preprint arXiv:1810.05997.
+view & editing, Writing – original draft, Methodology. Shan Jin: Writ-             [20] Aleksandar Bojchevski, Johannes Gasteiger, Bryan Perozzi, Amol Kapoor, Martin
+ing – review & editing, Supervision, Software, Data curation. Dawei                     Blais, Benedek Rózemberczki, Michal Lukasik, Stephan Günnemann, Scaling
+Zhang: Writing – review & editing, Supervision. Jinli Cao: Writing –                    graph neural networks with approximate pagerank, in: Proceedings of the 26th
+                                                                                        ACM SIGKDD International Conference on Knowledge Discovery & Data Mining,
+review & editing, Supervision. Zhonglong Zheng: Writing – review &
+                                                                                        2020, pp. 2464–2473.
+editing, Supervision.                                                              [21] Meng Liu, Hongyang Gao, Shuiwang Ji, Towards deeper graph neural networks,
+                                                                                        in: Proceedings of the 26th ACM SIGKDD International Conference on Knowledge
+Declaration of competing interest                                                       Discovery & Data Mining, 2020, pp. 338–348.
+                                                                                   [22] Wentao Zhang, Zeang Sheng, Mingyu Yang, Yang Li, Yu Shen, Zhi Yang, Bin
+    The authors declare that they have no known competing finan-                        Cui, A simple yet tough-to-beat baseline for graph representation learning, in:
+                                                                                        International Conference on Machine Learning, 2022.
+cial interests or personal relationships that could have appeared to
+                                                                                   [23] Bryan Perozzi, Rami Al-Rfou, Steven Skiena, Deepwalk: Online learning of
+influence the work reported in this paper.                                              social representations, in: Proceedings of the 20th ACM SIGKDD International
+                                                                                        Conference on Knowledge Discovery and Data Mining, 2014, pp. 701–710.
+Data availability                                                                  [24] Aditya Grover, Jure Leskovec, node2vec: Scalable feature learning for networks,
+                                                                                        in: Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge
+    Data will be made available on request.                                             Discovery and Data Mining, 2016, pp. 855–864.
+                                                                                   [25] Thomas N. Kipf, Max Welling, Variational graph auto-encoders, 2016, arXiv
+                                                                                        preprint arXiv:1611.07308.
+Acknowledgments
+                                                                                   [26] Petar Veličković, William Fedus, William L. Hamilton, Pietro Liò, Yoshua Bengio,
+                                                                                        R. Devon Hjelm, Deep graph infomax, 2018, arXiv preprint arXiv:1809.10341.
+   This work was funded by the National Natural Science Foundation                 [27] Yu Rong, Yatao Bian, Tingyang Xu, Weiyang Xie, Ying Wei, Wenbing Huang,
+of China 62272419, Natural Science Foundation of Zhejiang Province                      Junzhou Huang, Self-supervised graph transformer on large-scale molecular data,
+ZJNSFLZ22F020010.                                                                       Adv. Neural Inf. Process. Syst. 33 (2020) 12559–12571.
+
+
+                                                                              12
+Y. Gao et al.                                                                                                                                      Neurocomputing 596 (2024) 127952
+
+
+[28] R. Devon Hjelm, Alex Fedorov, Samuel Lavoie-Marchildon, Karan Grewal, Phil                  [55] Zhilin Yang, William Cohen, Ruslan Salakhudinov, Revisiting semi-supervised
+     Bachman, Adam Trischler, Yoshua Bengio, Learning deep representations by                         learning with graph embeddings, in: International Conference on Machine
+     mutual information estimation and maximization, 2018, arXiv preprint arXiv:                      Learning, PMLR, 2016, pp. 40–48.
+     1808.06670.
+[29] Ting Chen, Simon Kornblith, Mohammad Norouzi, Geoffrey Hinton, A simple
+                                                                                                                         Yinjie Gao obtained a bachelor’s degree from Wenzhou Uni-
+     framework for contrastive learning of visual representations, in: International
+                                                                                                                         versity in 2021 and is currently pursuing a master’s degree
+     Conference on Machine Learning, PMLR, 2020, pp. 1597–1607.
+                                                                                                                         at Zhejiang Normal University. His research interests include
+[30] Kaiming He, Haoqi Fan, Yuxin Wu, Saining Xie, Ross Girshick, Momentum
+                                                                                                                         machine learning, data mining and pattern recognition.
+     contrast for unsupervised visual representation learning, in: Proceedings of the
+     IEEE/CVF Conference on Computer Vision and Pattern Recognition, 2020, pp.
+     9729–9738.
+[31] Lirong Wu, Haitao Lin, Cheng Tan, Zhangyang Gao, Stan Z. Li, Self-supervised
+     learning on graphs: Contrastive, generative, or predictive, IEEE Trans. Knowl.
+     Data Eng. (2021).
+[32] Ouyang Jia, Huimin Huang, Jiaxin Ren, Luodi Xie, Yinyin Xiao, Contrastive
+     learning with text augmentation for text classification, Appl. Intell. (2023) 1–10.
+[33] Dexuan Lin, Xuefeng Ding, Dasha Hu, Yuming Jiang, Community-aware graph                                             Yaxin Sun received the B.Eng. degree from the China Three
+     contrastive learning for collaborative filtering, Appl. Intell. (2023) 1–14.                                        Gorges University, China in 2008, and the Ph.D. degree from
+[34] Wen-Zhi Li, Chang-Dong Wang, Jian-Huang Lai, S. Yu Philip, Towards effective                                        South China University of Technology, China in 2015. He is
+     and robust graph contrastive learning with graph autoencoding, IEEE Trans.                                          currently a postdoctor of the School of Computer Science,
+     Knowl. Data Eng. (2023).                                                                                            Zhejiang Normal University, China. His research interests
+[35] Jun Xia, Lirong Wu, Jintao Chen, Bozhen Hu, Stan Z. Li, Simgrace: A sim-                                            include speech emotion recognition, pattern recognition,
+     ple framework for graph contrastive learning without data augmentation, in:                                         and machine learning.
+     Proceedings of the ACM Web Conference 2022, 2022, pp. 1070–1079.
+[36] H. Zhao, X. Yang, Z. Wang, E. Yang, C. Deng, Graph debiased contrastive
+     learning with joint representation clustering, in: International Joint Conference
+     on Artificial Intelligence, 2021.
+[37] Zhizhong Huang, Jie Chen, Junping Zhang, Hongming Shan, Learning represen-
+     tation for clustering via prototype scattering and positive sampling, IEEE Trans.                                   Shan Jin obtained a bachelor’s degree from Zhejiang Nor-
+     Pattern Anal. Mach. Intell. (2022).                                                                                 mal University in 2006, a master’s degree from Lanzhou
+                                                                                                                         University of Technology in 2022, and is currently pursu-
+[38] G. Chu, X. Wang, C. Shi, X. Jiang, CuCo: Graph representation with curriculum
+                                                                                                                         ing a doctoral degree at Zhejiang University. His research
+     contrastive learning, in: International Joint Conference on Artificial Intelligence,
+                                                                                                                         interests include machine learning, data mining, analysis
+     2021.
+                                                                                                                         techniques, and application development.
+[39] Yujie Mo, Liang Peng, Jie Xu, Xiaoshuang Shi, Xiaofeng Zhu, Simple unsupervised
+     graph representation learning, in: Proceedings of the AAAI Conference on
+     Artificial Intelligence, AAAI, 2022, pp. 7797–7805.
+[40] Xinyi Xu, Cheng Deng, Yaochen Xie, Shuiwang Ji, Group contrastive self-
+     supervised learning on graphs, IEEE Trans. Pattern Anal. Mach. Intell. 45 (3)
+     (2022) 3169–3180.                                                                                                   Dawei Zhang received the Ph.D. degree from the Depart-
+[41] Qingfeng Li, Huifang Ma, Ruoyi Zhang, Wangyu Jin, Zhixin Li, Dual-view co-                                          ment of Computer Science, Zhejiang Normal University,
+     contrastive learning for multi-behavior recommendation, Appl. Intell. (2023)                                        Jinhua, China, in 2022. He is currently working as an
+     1–18.                                                                                                               assistant professor with the School of Computer Science and
+[42] Pengpeng Shao, Tong Liu, Dawei Zhang, Jianhua Tao, Feihu Che, Guohua Yang,                                          Technology, Zhejiang Normal University, Jinhua, China. His
+     Multi-level graph contrastive learning, 2021, arXiv preprint arXiv:2107.02639.                                      research interests include deep learning, computer vision,
+[43] Shuai Ma, Jian-wei Liu, Self-supervised contrastive learning for heterogeneous                                      and multimedia computing.
+     graph based on multi-pretext tasks, Neural Comput. Appl. 35 (14) (2023)
+     10275–10296.
+[44] Ming Jin, Yizhen Zheng, Yuan-Fang Li, Chen Gong, Chuan Zhou, Shirui Pan,
+     Multi-scale contrastive siamese networks for self-supervised graph representation
+     learning, 2021, arXiv preprint arXiv:2105.05682.
+[45] P. Sen, G. Namata, M. Bilgic, L. Getoor, Tina Eliassi-Rad, Collective classification                                Jinli Cao, an IEEE member, obtained her Ph.D. in com-
+     in network data, AI Mag. (2008).                                                                                    puter science from the University of Southern Queensland,
+[46] Oleksandr Shchur, Maximilian Mumme, Aleksandar Bojchevski, Stephan Günne-                                           Australia, in 1998. Presently, she holds the position of Asso-
+     mann, Pitfalls of graph neural network evaluation, 2018, arXiv preprint arXiv:                                      ciate Professor at the Department of Computer Science and
+     1811.05868.                                                                                                         Information Technology, La Trobe University, Melbourne,
+[47] Weihua Hu, Matthias Fey, Marinka Zitnik, Yuxiao Dong, Hongyu Ren, Bowen Liu,                                        Australia. Her research interests span the evolutionary fields
+     Michele Catasta, Jure Leskovec, Open graph benchmark: Datasets for machine                                          of data engineering, big data analytics, data privacy protec-
+     learning on graphs, 2020, arXiv preprint arXiv:2005.00687.                                                          tion, system vulnerability prediction, and recommendation
+[48] Petar Veličković, Guillem Cucurull, Arantxa Casanova, Adriana Romero, Pietro                                        systems.
+     Lio, Yoshua Bengio, Graph attention networks, 2017, arXiv preprint arXiv:
+     1710.10903.
+[49] Sheng Wan, Shirui Pan, Jian Yang, Chen Gong, Contrastive and generative graph                                       Zhonglong Zheng received the B.Eng. degree from the
+     convolutional networks for graph-based semi-supervised learning, in: Proceedings                                    University of Petroleum, China in 1999, and the Ph.D.
+     of the AAAI Conference on Artificial Intelligence, 2021, pp. 10049–10057.                                           degree from Shanghai JiaoTong University, China in 2005.
+[50] Zhen Peng, Wenbing Huang, Minnan Luo, Qinghua Zheng, Yu Rong, Tingyang                                              He is currently a full professor and the dean of the School
+     Xu, Junzhou Huang, Graph representation learning via graphical mutual infor-                                        of Computer Science, Zhejiang Normal University, China.
+     mation maximization, in: Proceedings of the Web Conference 2020, 2020, pp.                                          His research interests include machine learning, computer
+     259–270.                                                                                                            vision, and IOT technology with their applications.
+[51] Kaveh Hassani, Amir Hosein Khasahmadi, Contrastive multi-view representation
+     learning on graphs, in: International Conference on Machine Learning, PMLR,
+     2020, pp. 4116–4126.
+[52] Yanqiao Zhu, Yichen Xu, Feng Yu, Qiang Liu, Shu Wu, Liang Wang, Deep graph
+     contrastive representation learning, 2020, arXiv preprint arXiv:2006.04131.
+[53] Shantanu Thakoor, Corentin Tallec, Mohammad Gheshlaghi Azar, Mehdi Az-
+     abou, Eva L. Dyer, Remi Munos, Petar Veličković, Michal Valko, Large-scale
+     representation learning on graphs via bootstrapping, 2021, arXiv preprint arXiv:
+     2102.06514.
+[54] Jure Zbontar, Li Jing, Ishan Misra, Yann LeCun, Stéphane Deny, Barlow twins:
+     Self-supervised learning via redundancy reduction, in: International Conference
+     on Machine Learning, PMLR, 2021, pp. 12310–12320.
+
+
+                                                                                            13
+

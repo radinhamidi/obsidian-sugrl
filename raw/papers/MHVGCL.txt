@@ -1,0 +1,849 @@
+                                                               Applied Soft Computing Journal 171 (2025) 112783
+
+
+                                                                    Contents lists available at ScienceDirect
+
+
+                                                                   Applied Soft Computing
+                                                            journal homepage: www.elsevier.com/locate/asoc
+
+
+
+
+Robust graph contrastive learning with multi-hop views for node
+classification
+Yutong Wang a , Junheng Zhang a , Ren Cao a , Minhao Zou a , Chun Guan a , Siyang Leng a,b                                                ,∗
+a
+    Institute of AI and Robotics, Academy for Engineering and Technology, Fudan University, Shanghai 200433, China
+b
+    Research Institute of Intelligent Complex Systems, Fudan University, Shanghai 200433, China
+
+
+
+ARTICLE                 INFO                               ABSTRACT
+
+Keywords:                                                  Contrastive learning has been proven successful in graph self-supervised learning by addressing label scarcity
+Self-supervised learning                                   in real-world applications. Most existing methods fail to effectively incorporate multi-hop information into the
+Graph contrastive learning                                 augmented views but only focus on augmenting the raw input data, which incurs massive computational and
+Multi-hop
+                                                           memory costs. To address such limitations, we propose a novel approach, Multi-hop Views Graph Contrastive
+Node classification
+                                                           Learning (MHVGCL), that enhances the node classification performance for graphs. Specifically, in contrast
+                                                           to existing methods that generate multiple augmented heads via neural networks, our approach generates
+                                                           these heads by exploiting multi-hop information, which is obtained iteratively from a single output head.
+                                                           This technique can extract more comprehensive structural information without destroying the graph topology.
+                                                           We further devise a multi-hop contrastive loss function to maximize agreements among the multi-hop views
+                                                           of the same node, while minimizing them among different nodes. This design contributes to more robust
+                                                           representation learning that keeps structural attributes invariant under different augmented views. Numerical
+                                                           experimental results on a variety of benchmarks demonstrate the significant superiority of our approach over
+                                                           other advanced methods, by learning more discriminative node representations even with extremely limited
+                                                           labels.
+
+
+
+1. Introduction                                                                                GNNs are trained in a (semi-)supervised manner, heavily relying on
+                                                                                               massive labeled data, which produces substantial computational costs
+    Neural networks renowned for their effectiveness in uncovering                             and human annotation efforts. Particularly, in real-world applications,
+complex relationships within data have been widely explored and ap-                            this inevitably leads to significant expenditures of time and resources
+plied across numerous fields, such as computer vision [1,2], natural lan-                      in collecting such labeled data.
+guage processing [3], materials science [4–7], and etc. Building upon
+                                                                                                   Graph contrastive learning (GCL) has emerged as an effective graph
+these advancements, adapting neural networks to graph-structured data
+                                                                                               self-supervised learning paradigm to address the label scarcity prob-
+has emerged as a significant research direction. In recent years, graph
+                                                                                               lem. For instance, You et al. [13] proposed the Graph Contrastive
+neural networks (GNNs) have attracted considerable attention owing
+to their excellent performance across diverse graph mining tasks, in-                          Learning (GraphCL) framework, which generates augmented views
+cluding node classification [8–10], link prediction [11], and graph                            through random topology disturbances such as node dropping and
+classification [12]. Kipf and Welling [8] introduced the Graph Con-                            edge perturbation. Zhu et al. [14] introduced the Deep Graph Infomax
+volutional Network (GCN), which leverages spectral graph theory to                             (DGI), which uses feature masking to maximize mutual information
+perform semi-supervised learning on graph-structured data, achiev-                             between graph-level and node-level representations. By utilizing data
+ing state-of-the-art results on node classification benchmarks. Later,                         augmentation and contrastive objectives, GCL allows high-quality node
+Velickovic et al. [9] proposed the Graph Attention Network (GAT),                              representations to be learned in a self-supervised manner with lim-
+which employs attention mechanisms to assign different weights to                              ited label information. Therefore, generating augmented views that
+neighboring nodes, further improving node classification performance.
+                                                                                               sufficiently incorporate node features and graph structure information
+Recently, Zou et al. [10] demonstrated that incorporating similarity
+                                                                                               is crucial for obtaining superior performance on downstream tasks
+metrics enhances node embeddings in heterophilic graph contexts.
+                                                                                               such as node classification. Intuitively, augmented views containing
+While these approaches achieve impressive accuracy, most existing
+
+
+     ∗ Corresponding author at: Institute of AI and Robotics, Academy for Engineering and Technology, Fudan University, Shanghai 200433, China.
+       E-mail addresses: mhzou22@m.fudan.edu.cn (M. Zou), chunguan@fudan.edu.cn (C. Guan), syleng@fudan.edu.cn (S. Leng).
+
+https://doi.org/10.1016/j.asoc.2025.112783
+Received 8 August 2024; Received in revised form 24 December 2024; Accepted 16 January 2025
+Available online 23 January 2025
+1568-4946/© 2025 Elsevier B.V. All rights are reserved, including those for text and data mining, AI training, and similar technologies.
+Y. Wang et al.                                                                                                          Applied Soft Computing 171 (2025) 112783
+
+
+node attributes and structure details enable more effective contrast be-          Section 3 presents the Methodology, detailing the Preliminaries, Base
+tween positives and negatives for self-supervised graph representation            View Generation, Multi-hop Views, and the Multi-hop Contrastive Loss.
+learning.                                                                         In Section 4, we outline the Experiments, including the Datasets, Base-
+    Most GCL works generate different views through two typical tech-             lines, and Experimental Settings. The results are presented in Section 5,
+niques, i.e., topology augmentation and feature augmentation. Specifi-            covering Node Classification Performance, Computational and Mem-
+cally, as graph topology contains essential structural information, ran-          ory Efficiency Comparison (with sub-comparisons to NCLA and other
+dom topology disturbances generating topology augmentations, such as              self-supervised methods), Ablation Study, Hyperparameter Analysis,
+node dropping [13], edge removing [15] and adding [13], fail to pre-              Visualization of Node Embeddings, and Discussion. Finally, we con-
+serve the original graph topology and consequently degrade the quality            clude the paper in Section 6, summarizing our findings and suggesting
+of learned representations on certain downstream tasks. On the other              directions for future research.
+hand, pure feature augmentations like masking [14] and dropout [13]
+only depend on the node features but neglect structural information,              2. Related works
+leading to suboptimal performance. Moreover, these methods fail to
+consider multi-hop information, which preserve the graph topology                    Regarding recent developments in GNNs and GCLs, we concisely
+and can bring in both local and global topology and feature infor-                review existing works mainly of two areas: (1) recent graph neural
+mation. Therefore, how to effectively exploit multi-hop information to            networks that incorporate multi-hop information; (2) recent graph
+strengthen the robustness and performance of GCL remains an open                  contrastive learning approaches.
+question. Furthermore, these augmentation methods, originated from
+the computer vision field and only augmented the raw input data, entail           2.1. Graph neural networks incorporating multi-hop information
+substantial computational and memory costs.
+    To overcome the constraints, we present an innovative framework                   In graph neural networks, the receptive field of a single layer
+termed Multi-hop Views Graph Contrastive Learning (MHVGCL). In                    is restricted to one-hop connections. This restriction can be released
+contrast to conventional multi-head approaches that create multiple               by stacking multiple layers to exploit multi-hop information, which
+augmented views with unshared learnable parameters through a few                  enlarges the receptive field. Existing works have incorporated multi-
+neural networks, multi-hop information can be incorporated into GCL               hop context in different ways. MHGNNs [16] address the issue of
+from a single neural network output head. This technique mitigates                narrow receptive field for graph-structured data by concatenating hop-
+issues of excessive computational cost and memory overhead, com-                  level features and reusing neighbors information to capture further
+pared to performing augmentations on raw data, as the dimensionality              hop-level features effectively. MAGNA [17] merges multi-hop context
+of the output head is always much lower. Concretely, it generates                 information into each layer of GNN attention computation, which
+multiple augmented heads by exploiting multi-hop information, which               learns more informative attention distribution and captures large-scale
+are obtained iteratively from the single output head. This technique can          structural information in every layer. AGDNs [18] integrate smaller
+extract more comprehensive structural information without destructing             multi-hop node representations with learnable and generalized weight-
+the graph topology. We further devise a multi-hop contrastive loss to             ing coefficients, rather than combining large and dense powers of the
+maximize agreements among the multi-hop views of a same node, while               transition matrix with predefined weighting coefficients. UniG-Encoder
+minimizing them among different nodes. This design contributes to                 II [19] performs a multi-hop aggregation process to iteratively update
+more robust representation learning that keeping structural attributes            the node embeddings, and generates final embeddings by concatenating
+invariant under different augmented views. In addition, we design an              them via a 1 × 1 convolution kernel. In the proposed method, we
+alternative version MHVGCL-2V of MHVGCL which contains only the                   perform multi-hop aggregation on a single output head to generate
+first augmented view and the last augmented view during training and              multi-hop views for graph contrastive learning, which is different from
+downstream task, which further save memory and time cost compared                 the above GNN paradigms.
+with the multi-view version MHVGCL-MV.
+    The key contributions of this work can be summarized as follows:              2.2. Graph contrastive learning
+
+    • We propose a graph contrastive learning framework, called
+                                                                                      Graph contrastive learning is currently a trending topic in graph
+      MHVGCL, that generates augmented views directly from a single
+                                                                                  representation learning, which draws inspiration from prominent con-
+      output head, instead of exploiting multi-head outputs produced
+                                                                                  trastive learning frameworks originated in computer vision, by utilizing
+      from the raw data. MHVGCL includes two versions: MHVGCL-MV,
+                                                                                  data augmentation and contrastive objectives, such as CPC [1], Sim-
+      which leverages all augmented views, and MHVGCL-2V, which
+                                                                                  Siam [20], and MoCo [2]. Existing GCL works have incorporated a
+      contains only the first and the last augmented view, significantly
+                                                                                  variety of augmentation and contrasting strategies [21]. NCLA [22]
+      reducing computational and memory overhead.
+                                                                                  introduces a novel neighbor contrastive loss for node-node GCL to
+    • We design an augmentation method for graph data that gener-
+                                                                                  allow for multiple positives per anchor, employing network topology
+      ates multiple augmented views by integrating multi-hop informa-
+                                                                                  as the supervised signals. DGI [23] employs the row-wise shuffling
+      tion. This technique can extract more comprehensive structural
+                                                                                  of node attributes to contrast node representations between the origi-
+      information without destructing the graph topology.
+                                                                                  nal and corrupted graph. GMI [24] contrasts the input neighborhood
+    • We introduce a multi-hop contrastive loss function to maximize
+                                                                                  feature and hidden representation of each node. GRACE [15] uti-
+      agreements among the multi-hop views of a same node, while
+                                                                                  lizes a contrastive objective at the node level after generating two
+      minimizing them among different nodes. This design contributes
+                                                                                  graph views through the removal of edges and the masking of at-
+      to more robust representation learning that keeping structural
+                                                                                  tributes. Unlike GRACE’s uniform perturbation, GCA [14] performs
+      attributes invariant under different augmented views.
+                                                                                  adaptive augmentation according to the edges’ and features’ impor-
+    Experimental evaluations on various benchmarks validate the ad-               tance scores. TriCL [25] constructs a tri-directional contrast, combining
+vancement of our approach over other advanced methods, by learning                node-, group-, and membership-level contrasts. MVGRL [26] uses graph
+more discriminative node representations even with extremely limited              diffusion to generate an additional structural view of a sample graph
+labels.                                                                           which along with a regular view are sub-sampled and fed to two ded-
+    The rest of the paper is organized as follows. In Section 2, we discuss       icated GNNs followed by a shared MLP to learn node representations.
+related works, focusing on two key areas: Graph Neural Networks                   In this work, we demonstrate that incorporating the multi-hop views
+Incorporating Multi-hop Information and Graph Contrastive Learning.               can further enhance the node classification performance.
+
+                                                                              2
+Y. Wang et al.                                                                                                                  Applied Soft Computing 171 (2025) 112783
+
+
+
+
+                                         Fig. 1. The proposed multi-hop views graph contrastive learning (MHVGCL) framework.
+
+
+3. Methodology                                                                        Table 1
+                                                                                      Summary of symbols and their meanings.
+                                                                                       Symbols             Notations
+    The overall architecture of the proposed Multi-hop Views Graph
+Contrastive Learning framework is depicted in Fig. 1. It consists of three                                Undirected graph
+                                                                                                          Node set
+key components: (1) base view generation, (2) multi-hop views, (3)
+                                                                                                          Edge set
+multi-hop contrastive loss. We first utilize linear transformation to gen-             𝐗                   Raw node feature matrix
+erate the base view containing relatively low-dimensional node repre-                  ||                 The cardinality of set 
+sentations. This base view is then used to generate multiple augmented                 𝐁                   Incidence matrix
+                                                                                       𝑑(𝑣𝑖 )              Degree of node 𝑣𝑖
+views by integrating multi-hop information. A multi-hop contrastive
+                                                                                       𝛿(𝑒𝑗 )              Degree of edge 𝑒𝑗
+loss is subsequently used to maximize agreement between embeddings                     ̃
+                                                                                       𝐀                   Standardized adjacency matrix incorporating self-loops
+of positive pairs while minimizing agreement between negative pairs                    𝐿                  Labeled data
+across all the multi-hop views. The learned node representations can                   𝑈                  Unlabeled data
+then be further utilized for downstream node classification and clus-                  𝐠                   Augmentation function
+                                                                                       𝐇                   Multi-hop views representation
+tering tasks. The technical details and design of each component are                   𝐾                   The number of augmented views
+described in the following subsections.                                                𝐹                   The original dimensionality of features
+                                                                                       𝐹′                  The reduced dimensionality of features
+3.1. Preliminaries                                                                     𝜓𝜃                  An 𝐿2 -regularized logistic regression classifier
+                                                                                       𝐡𝑖                  The 𝑖th row of 𝐇
+                                                                                       𝑦𝑖                  Known label for the nodes in 𝐿
+     Notations. Let  = (, ) denote an undirected graph, consisting                  𝓁̃                  A function measuring the distance between predicted and
+of a node set  = {𝑣1 , … , 𝑣𝑁 } with 𝑁 elements and an edge set                                           true labels.
+ = {𝑒1 , … , 𝑒𝑀 } with 𝑀 elements, where each element 𝑒𝑖 in the edge                  𝐇(0)                The base view
+                                                                                       𝐒                   The bias term
+set  represents a connection between two nodes in the node set .                     𝐖                   A learnable weight matrix
+     We define the raw node feature matrix 𝐗 ∈ R𝑁×𝐹 , whose 𝑖th 𝐹 -                    𝐇(𝑘)                Multi-hop views
+dimensional row-component vector 𝐱𝑖 corresponds to node 𝑣𝑖 ’s features.
+Denote the cardinality of set  as ||. The incidence                   ||×||
+                                                      { matrix 𝐁 ∈ R
+                                                       1, if 𝑣𝑖 ∈ 𝑒𝑗
+can concisely represent the graph , with 𝐁𝑖𝑗 =                       , where         These generated node embeddings can be adapted to fulfill various
+                                                       0, ot her wise
+                                                                                      downstream tasks including node classification considered in this work.
+𝑒1 , … , 𝑒|| is an ordered sequence of all edges. The degrees are defined
+              ∑                    ∑                                                     Let 𝜓𝜃 signify an 𝐿2 -regularized logistic regression classifier param-
+as 𝑑(𝑣𝑖 ) = 𝑗 𝐁𝑖𝑗 and 𝛿(𝑒𝑗 ) = 𝑖 𝐁𝑖𝑗 for nodes and edges respectively.
+                                                                                      eterized by 𝜃. The objective for semi-supervised node classification is
+Diagonal matrices of these degrees are written as 𝐃 ∈ R||×|| and
+                                                                                      to minimize the loss cls
+𝐃 ∈ R||×|| . As introduced in [19], the standardized adjacency matrix                                          ∑      (            )
+                                    [      ]−1 [              ]
+incorporating self-loops is ̃   𝐀 = 𝐈 + 𝐃       𝐈 + 𝐁𝐃 −1 𝐁⊤ . We focus on          min cls (𝜃 , 𝐇, 𝐿 ) = min      𝓁̃ 𝜓𝜃 (𝐡𝑖 ), 𝑦𝑖 ,                      (1)
+                                                                                       𝜃                     𝜃
+semi-supervised node classification task, where only a subset of nodes                                           (𝑣𝑖 ,𝑦𝑖 )∈𝐿
+
+𝐿 are assigned with labels 𝐿 . These labeled data are referred to as                where 𝐡𝑖 is the 𝑖th row of 𝐇 denoting the learned embedding of node 𝑣𝑖 ,
+𝐿 = (𝐿 , 𝐿 ), while the remaining unlabeled nodes are denoted by                   and 𝑦𝑖 represents the known label for the nodes in 𝐿 . 𝓁̃ is a function
+𝑈 = (𝑈 , 𝑈 ), where 𝑈 corresponds to their unknown true labels.                   measuring the distance between predicted and true labels.
+     To facilitate reference, we further summarize all the symbols used
+in the paper as follows (see Table 1).                                                3.2. Base view generation
+     Problem Formulation. Our objective is to learn useful node em-
+beddings using a linear transformation combined with an augmentation                      In MHVGCL, all augmented views are generated from the same base
+function 𝐠. This function takes the node features 𝐗 and graph struc-                  view, which is obtained through a linear transformation. The parame-
+ture 𝐀 ̃ as input, and outputs a multi-hop views representation 𝐇 =                   ters of this linear transformation are learnable. In fact, these parameters
+                              ′
+𝐠(Linear(𝐗), ̃  𝐀) ∈ R𝑁×(𝐹 ⋅𝐾) in a low-dimensional space. Here the                   are the only ones that need training throughout the whole procedure,
+linear transformation Linear(𝐗) reduces the dimensionality of features                which significantly mitigates computational and memory burdens com-
+from 𝐹 to 𝐹 ′ (𝐹 ′ ≪ 𝐹 ) and 𝐾 is the number of augmented views.                      paring to the methods generating multiple augmented views separately
+
+                                                                                  3
+Y. Wang et al.                                                                                                              Applied Soft Computing 171 (2025) 112783
+
+
+but from raw input data. The output of the linear transformation,              3.4. Multi-hop contrastive loss
+serving as the basis, is subsequently fused with multi-hop information
+iteratively, without generating more learnable parameters.                          We devise a multi-hop contrastive loss based on the work in In-
+    The base view, 𝐇(0) , can thus be expressed as                             foNCE [2], where a commonly used loss in GCL is proposed. InfoNCE
+                                                                               realizes contrasting learning by enhancing discriminability through
+𝐇(0) = 𝐗𝐖 + 𝐒,                                                      (2)        pulling positive pairs close while pushing negative pairs apart. Specifi-
+                                                                               cally, the embeddings of a node 𝑣𝑖 across two different views, 𝐡(𝑘)𝑖 and
+where 𝐒 ∈ R       𝑁×𝐹 ′
+                 is the bias term and 𝐖 ∈ R   𝐹 ×𝐹 ′
+                                                   denotes a learnable         𝐡(𝑙)
+                                                                                𝑖 (𝑘 ≠ 𝑙), form a positive pair. And the embeddings of different nodes
+weight matrix projecting input features into the embedding space of            in either two same or two different views are treated as negative pairs.
+base view. The bias term, practically implemented as a broadcast of                 The similarity between a node pair (𝑣𝑖 , 𝑣𝑗 ) across views 1 and 2 is
+                        ′
+a bias vector 𝐬 ∈ R1×𝐹 , offers flexibility in shifting the base view          defined as
+embeddings as needed.                                                                      (           )
+                                                                               𝑠(1,2)
+                                                                                𝑖𝑗    = sim 𝐡(1)   (2)
+                                                                                              𝑖 , 𝐡𝑗     ∕𝜏 ,                                         (6)
+                                                                                           (     ) (        ) (               )
+                                                                               where sim 𝐳𝑖 , 𝐳𝑗 = 𝐳𝑖 𝐳𝑗⊤ ∕ ‖          ‖ ‖𝐳𝑗 ‖
+3.3. Multi-hop views                                                                                              ‖ 𝐳𝑖 ‖ ‖
+                                                                                                                         ‖ ‖
+                                                                                                                             ‖ , and 𝜏 is a temperature param-
+                                                                               eter.
+                                                                                   The InfoNCE loss for node 𝑣𝑖 contrasting positive pairs against
+    Most GNNs incorporate multi-hop information naturally by propa-            negative pairs is written as,
+                                                                                                              (       )
+gating node features across multiple layers. This mechanism allows for           (          )            exp 𝑠(1,2)
+                                                                                    (1) (2)                     𝑖𝑖
+aggregating the information from farther nodes in high order neigh-            𝓁 𝐡𝑖 , 𝐡𝑖      = − log      (     )          ,                               (7)
+borhoods. More informative node representations encoding both local                                   exp 𝑠(1,2)
+                                                                                                             𝑖𝑖     +Neg
+feature and global structure information, can be learned through stack-                               ⏟⏞⏞⏞⏞⏟⏞⏞⏞⏞⏟
+                                                                                                       positive pair
+ing more layers, which on the other hand may cause problems such as
+over-smoothing. Different from the conventional setting, we explicitly         where the negative component Neg sums both intra- and inter-view
+use the 𝑘th power (𝑘 = 1, 2, . . . ) of the adjacency matrix, which            negatives:
+encodes the numbers of 𝑘-hop paths connecting pairs of nodes, to                     ∑𝑁                (     )         (     )
+                                                                               Neg =     1[𝑗≠𝑖] [ exp 𝑠(1,1)
+                                                                                                         𝑖𝑗    +  exp 𝑠(1,2)
+                                                                                                                         𝑖𝑗    ].            (8)
+aggregate features from multi-hop neighbors, and eliminate the need
+                                                                                     𝑗=1          ⏟⏞⏞⏞⏞⏟⏞⏞⏞⏞⏟     ⏟⏞⏞⏞⏞⏟⏞⏞⏞⏞⏟
+for additional layers and extra trainable parameters. By exploiting each                        intra-view negative pair   inter-view negative pair
+hop, useful information can be propagated and encoded into the final
+                                                                               1[𝑗≠𝑖] ∈ {0, 1} is an indication function that equals to 1 iff 𝑗 ≠ 𝑖.
+representation. We further fuse together information from all hops
+                                                                                   Considering the symmetry of views, the total contrastive loss ssl
+through an aggregation mechanism to create the final multi-hop views.
+                                                                               between views 𝑘 and 𝑙, averaged over all nodes, is
+   To be concrete, the multi-hop views 𝐇(𝑘) are iteratively generated                       𝑁 [ (               )   (             )]
+                                                                                        1 ∑
+according to the following equation:                                           ssl =            𝓁 𝐡𝑖(𝑘) , 𝐡𝑖(𝑙) + 𝓁 𝐡𝑖(𝑙) , 𝐡𝑖(𝑘) .                 (9)
+                                                                                       2𝑁 𝑖=1
+           (                         )
+𝐇(𝑘) = ELU 𝛼 𝐀𝐇
+              ̃ (𝑘−1) + (1 − 𝛼)𝐇(𝑘−1) ,                           (3)
+                                       ′
+                                                                                  In our proposed MHVGCL-MV where more than two views are
+where 𝑘 = 1, 2, … , 𝐾 and 𝐇(𝑘) ∈ R𝑁×𝐹 . Notice that all the 𝐾 multi-hop        available, we randomly select one view 𝐇(𝑙) as the pivot. The total
+views are sequentially generated based on 𝐇(0) , with simple iterations.       multi-hop contrastive loss averages all the pairwise losses between the
+The trade-off parameter 𝛼 controls the fusion proportion between the           pivot and every other view:
+two consecutive augmented views. ELU refers to the Exponential Linear                       ∑
+                                                                                            𝐾
+                                                                                      1
+Unit activation function.                                                      =                 (𝐇(𝑘) , 𝐇(𝑙) ).                                            (10)
+                                                                                    𝐾 − 1 𝑘=0,𝑘≠𝑙 ssl
+   Finally, for MHVGCL-MV, the embeddings of all views are concate-
+nated to generate the output node representation 𝐇, i.e.,                          Notably, both the augmented views and node embeddings are
+        (0)      (1)
+𝐇 = [𝐇 , 𝐇 , … , 𝐇          (𝐾)
+                                  ].                                (4)        learned in an end-to-end manner in MHVGCL, providing flexibility
+                                                                               and ease of use. The detailed algorithmic description of MHVGCL is
+                                                                               presented in Algorithm 1.
+   While for MHVGCL-2V, only the embeddings of the first and the last          Algorithm 1 : MHVGCL
+views are concatenated, i.e.,                                                  Require: standardized adjacency matrix ̃
+                                                                                                                      𝐀, feature matrix 𝐗, number
+        (0)      (𝐾)                                                              of augmented views 𝐾, number of training epochs 
+𝐇 = [𝐇 , 𝐇             ].                                           (5)
+                                                                                1: for 𝑡 = 1, 2, ⋯ ,  do
+The obtained 𝐇 is then used to calculate the contrastive loss, which is         2:   Generate the base view 𝐇(0) with Eq. (2);
+employed to update the parameters 𝐖 and 𝐒 via gradient descent. The             3:   for 𝑘 = 1, 2, ⋯ , 𝐾 do
+learned node embeddings 𝐇 are subsequently conveyed to downstream               4:      Generate the 𝑘-th augmented view 𝐇(𝑘) iteratively with Eq. (3);
+tasks.                                                                          5:   end for
+    This component in MHVGCL serves as the key advancement due                  6:   Concatenate the augmented views to generate the final embed-
+                                                                                      dings with Eq. (4) for MHVGCL-MV or Eq. (5) for MHVGCL-2V;
+to its efficiency in generating the augmented views, compared to tra-
+ditional graph augmentation techniques. It can produce meaningful
+                                                                                7:   Compute multi-hop contrastive loss with Eq. (10);
+augmented views that integrate the rich multi-hop graph information
+                                                                                8:   Update parameters by applying gradient descent to minimize ;
+but avoid bringing in excessive computational costs. This technique of          9: end for
+iterating multi-hop views based on a single neural network output fur-         10: Generate embeddings with optimal parameters with Eqs. (2), (3),
+ther preserves the original graph topology, without harming the quality             and (4) or (5).
+of structural information as in the perturbation-based augmentation
+                                                                               Ensure: Embeddings 𝐇
+methods.
+
+                                                                           4
+Y. Wang et al.                                                                                                                       Applied Soft Computing 171 (2025) 112783
+
+Table 2                                                                                            • Semi-supervised contrastive methods:
+Statistics of five graph datasets.
+                                                                                                     CG𝟑 [29] enriches supervision signals with a semi-supervised
+ Datasets         CiteSeer     Cora         PubMed         Coauthor-CS      Amazon-Photo             contrastive loss that captures relationships between data features
+ ||              3,327        2,708        19,717         18,333           7,650                    and graph topology, improving classification with both labeled
+ ||              9,228        10,556       88,651         163,788          238,162
+                                                                                                     and unlabeled data.
+ # Features       3,703        1,433        500            6,805            745
+ # Classes        6            7            3              15               8                        CGPN [30] propagates limited labels across the graph using struc-
+                                                                                                     ture information and employs a contrastive objective to extract
+                                                                                                     supervision from extensive unlabeled data.
+Table 3
+                                                                                                   • Self-supervised contrastive methods:
+Hyperparameter settings of MHVGCL-2V.
+                                                                                                     GMI [24] measures the correlation between input graphs and
+ Datasets          # Augmented        # Embedding    Temperature     Learning     Weight
+                   views              dimension                      rate         decay              high-level hidden representations, maximizing mutual informa-
+                                                                                                     tion between input and output of a graph neural encoder regard-
+ Cora              7                  128            5.0             1e−2         5e−5
+ CiteSeer          6                  128            5.0             1e−3         1e−4               ing node features and topology.
+ PubMed            3                  32             5.0             1e−2         1e−4               DGI [23] generates graph views by removing edges and masking
+ Coauthor-CS       4                  128            1.0             1e−3         0.0                node features, applying a contrastive loss to maximize agreement
+ Amazon-Photo      4                  128            1.0             1e−3         1e-4
+                                                                                                     of node embeddings within these views.
+                                                                                                     GRACE [15] focuses on node-level contrastive learning, creating
+Table 4                                                                                              graph views by removing edges and masking node features, fol-
+Hyperparameter settings of MHVGCL-MV.                                                                lowed by a contrastive loss to maximize node embedding agree-
+ Datasets          # Augmented        # Embedding    Temperature     Learning     Weight             ment.
+                   views              dimension                      rate         decay              MVGRL [26] learns node and graph-level representations by con-
+ Cora              8                  128            5.0             1e−2         5e−5               trasting encodings from two structure views, including first-order
+ CiteSeer          9                  64             5.0             2e−2         1e−4
+                                                                                                     neighbors and graph diffusion.
+ PubMed            2                  32             2.0             2e−2         1e−4
+ Coauthor-CS       3                  128            2.0             1e−3         1e−4               GCA [14] maximizes agreement of node embeddings between
+ Amazon-Photo      5                  128            5.0             2e−2         0                  views generated through adaptive graph augmentation, incorpo-
+                                                                                                     rating diverse priors to address both topological and semantic
+                                                                                                     aspects.
+                                                                                                     AFGRL [31] creates an alternative view by identifying nodes that
+    The time complexity of a linear transformation is(𝑂(𝑁 𝐹)𝐹 ′ ). And the
+                                                                                                     serve as positive samples, considering both local structure and
+time complexity for generating the 𝑘th view is 𝑂 𝑁 2 𝐹 ′ . Therefore,
+                                                                                                     global semantics of graphs.
+the
+  ( time complexity
+                  )     for generating all the 𝐾 augmented views is
+                                                                                                     SUGRL [32] introduces two triplet losses to explore comple-
+𝑂 𝑁 𝐹 ′ (𝐹 + 𝑁 𝐾) . The
+                      ( time complexity
+                                      )      for calculating the multi-hop
+                                                                                                     mentary information between structure and neighbor informa-
+contrastive loss is (𝑂 𝑁 2 𝐹 ′ (𝐾 − 1) . Then the
+                                               ) overall
+                                                       ( time complexity )                           tion, aiming to increase interclass variation and reduce intraclass
+of MHVGCL is 𝑂 𝑁 𝐹 𝐹 ′ + 𝑁 2 𝐹 ′ (2𝐾 − 1) ≈ 𝑂 𝑁 𝐹 𝐹 ′ + 𝑁 2 𝐹 ′ 𝐾 .
+Note that in practice, it is always sufficient to take 𝐾 ≤ 10, which                                 variation with an upper bound loss.
+is relatively small, so the time complexity of MHVGCL is comparable                                  NCLA [22] uses a multi-head graph attention mechanism to learn
+to the representative GCL methods, e.g., GRACE and GCA. Moreover,                                    graph augmented views with adaptive topology, compatible with
+since our method makes augmentations on the output embedding, the                                    diverse datasets without prior domain knowledge. It employs a
+time complexity is smaller than those directly making augmentations                                  neighbor contrastive loss to enable multiple positives per anchor,
+                                                                  (       )
+on raw input node features, which have time complexity 𝑂 𝑁 2 𝐹 𝐾                                     using network topology as supervised signals.
+        ′
+with 𝐹 ≪ 𝐹 .
+
+4. Experiments                                                                                 4.3. Experimental settings
+
+
+4.1. Datasets                                                                                      The MHVGCL model proposed in this work was implemented us-
+                                                                                               ing PyTorch (Version 1.13.0) and Torch-geometric (Version 2.4.0).
+     We evaluate the effectiveness of our proposed model through ex-                           MHVGCL was trained by the Adam optimizer. In our experiments, we
+tensive experiments on five benchmark datasets for semi-supervised                             fixed the control factor 𝛼 = 0.9. The number of epochs was fixed
+node classification task, including three widely-used citation networks,                       as 2000, and the dropout was fixed as 0.5, respectively. To provide
+i.e., Cora, CiteSeer, PubMed [27], a co-authorship network, i.e., Coauthor-                    fair comparisons, in line with the settings of MVGCL and NCLA, we
+CS [28], and a product co-purchase network, i.e., Amazon-Photo [28].                           employed grid search to select the hyperparameters from the following
+The statistics of these datasets are listed in Table 2.                                        ranges for all datasets without fine-tuning. We chose the learning
+                                                                                               rate from {1𝑒 − 2, 1𝑒 − 3} and weight decay from {0, 1𝑒 − 4, 5𝑒 − 5},
+4.2. Baselines                                                                                 respectively. We also used early stopping with a patience of 100.
+                                                                                               We set the size of the hidden dimension of node embedding from
+    To evaluate the effectiveness of MHVGCL, we compare it with                                {32, 64, 128}. The temperature value of the loss function was chosen
+12 advanced methods for semi-supervised node classification tasks,                             from {0.5, 1, 2, 5}. The number of heads was varied from 2 to 10 to
+including 2 semi-supervised GNNs, 2 semi-supervised GCL methods,
+                                                                                               investigate its effect. With the above hyperparameter settings, the
+and 8 self-supervised GCL methods:
+                                                                                               results have already outperformed the results of the previous methods.
+    • Semi-supervised GNNs:                                                                    The selected hyperparameters applied to MHVGCL-2V and MHVGCL-
+      GCN [8] employs an efficient layer-wise propagation rule based                           MV across the five datasets were presented in Table 3 and Table 4,
+      on a first-order approximation of spectral convolutions for node                         respectively. For the ablation study to investigate the impact of the
+      classification on graphs.                                                                hyperparameters, we fixed the learning rate at 0.01, the hidden dimen-
+      GAT [9] uses a multi-head attention mechanism to dynamically                             sion of node embedding at 128, the temperature value at 2, and the
+      generate aggregated weights for neighboring nodes, overcoming                            number of heads at 3 for all datasets, varying only the hyperparameter
+      limitations of earlier methods like graph convolutions through                           under examination across multiple values, while keeping the remaining
+      masked self-attentional layers.                                                          hyperparameters unchanged. For the self-supervised GCL baselines and
+
+                                                                                           5
+Y. Wang et al.                                                                                                                           Applied Soft Computing 171 (2025) 112783
+
+
+
+                 Table 5
+                 Performance on five datasets with different quantities of labeled nodes within each class. Mean accuracy (%) ± standard deviation is
+                 shown for each method. The best and second-best results are highlighted in boldface and underlined respectively.
+                  Datasets           c       Methods
+                                             GCN             GAT            CGPN               CG3               DGI               GMI              MVGRL
+                                     1       42.6 ± 11.6     42.1 ± 9.5     58.6 ± 10.6        55.4 ± 14.3       55.4 ± 11.4       55.9 ± 9.6       59.1 ± 10.9
+                                     2       55.0 ± 7.5      53.2 ± 9.0     67.4 ± 7.1         66.4 ± 7.7        64.9 ± 9.0        65.2 ± 7.6       67.8 ± 8.6
+                  Cora               3       63.1 ± 6.8      63.2 ± 5.3     70.7 ± 4.0         71.5 ± 4.2        71.1 ± 5.6        70.7 ± 5.2       74.5 ± 4.1
+                                     4       66.4 ± 6.4      66.3 ± 5.9     70.7 ± 2.9         72.7 ± 2.4        72.9 ± 4.5        73.3 ± 4.3       76.1 ± 3.2
+                                     20      79.6 ± 1.8      81.2 ± 1.6     74.0 ± 1.7         80.6 ± 1.6        82.1 ± 1.3        79.4 ± 1.2       𝟖𝟐.𝟒 ± 𝟏.𝟓
+                                     1       33.8 ± 5.9      31.0 ± 7.2     48.6 ± 11.3        48.4 ± 12.8       47.2 ± 9.2        40.8 ± 6.8       32.8 ± 8.4
+                                     2       44.8 ± 5.5      41.1 ± 7.2     58.0 ± 5.1         60.2 ± 6.8        58.6 ± 4.3        50.2 ± 4.1       47.8 ± 7.5
+                  CiteSeer           3       49.2 ± 5.1      48.6 ± 6.7     59.4 ± 5.4         62.1 ± 7.3        63.3 ± 4.3        55.1 ± 2.7       55.2 ± 6.7
+                                     4       51.7 ± 4.5      52.8 ± 6.6     60.6 ± 3.4         65.1 ± 2.5        65.8 ± 2.1        57.9 ± 3.0       59.3 ± 5.5
+                                     20      66.0 ± 1.2      68.9 ± 1.8     63.7 ± 1.6         70.9 ± 1.5        71.6 ± 1.2        66.9 ± 2.2       71.1 ± 1.4
+                                     1       48.6 ± 7.1      47.9 ± 8.5     53.5 ± 13.4        54.7 ± 8.6        50.0 ± 9.5        53.5 ± 11.9      55.3 ± 9.3
+                                     2       55.8 ± 7.1      54.5 ± 7.7     59.7 ± 10.3        58.9 ± 7.2        58.5 ± 8.7        60.7 ± 9.9       62.7 ± 7.0
+                  PubMed             3       62.1 ± 7.3      61.5 ± 6.8     61.8 ± 10.4        65.1 ± 6.5        62.4 ± 7.2        65.5 ± 8.9       68.5 ± 5.8
+                                     4       65.1 ± 5.9      64.2 ± 6.1     62.7 ± 10.3        66.0 ± 5.7        64.1 ± 6.2        67.2 ± 8.1       70.6 ± 6.0
+                                     20      79.0 ± 2.5      78.5 ± 1.8     73.3 ± 2.5         78.9 ± 2.6        78.3 ± 2.4        76.8 ± 2.3       79.5 ± 2.2
+                                     1       64.8 ± 8.8      64.2 ± 9.0     68.4 ± 8.9         79.8 ± 8.0        71.4 ± 6.3        68.3 ± 7.2       75.4 ± 7.2
+                                     2       79.2 ± 4.2      80.2 ± 4.1     77.7 ± 5.3         85.3 ± 4.0        79.6 ± 5.3        78.1 ± 4.5       84.7 ± 2.7
+                  Coauthor-CS        3       83.3 ± 4.0      85.0 ± 2.7     80.4 ± 4.4         87.5 ± 3.9        82.3 ± 3.6        80.9 ± 4.4       87.5 ± 2.2
+                                     4       84.2 ± 3.1      86.6 ± 2.1     80.9 ± 3.6         87.1 ± 4.6        84.8 ± 2.8        82.8 ± 2.8       88.5 ± 1.8
+                                     20      90.0 ± 0.6      90.9 ± 0.7     83.5 ± 1.4         90.6 ± 1.0        92.0 ± 0.5        88.5 ± 0.8       91.5 ± 0.6
+                                     1       60.7 ± 9.3      59.0 ± 11.5    70.4 ± 7.2         69.3 ± 5.8        53.8 ± 10.7       58.2 ± 8.1       59.7 ± 9.0
+                                     2       75.2 ± 7.2      71.7 ± 6.4     75.7 ± 4.3         77.2 ± 3.6        62.7 ± 8.5        68.8 ± 6.2       73.4 ± 6.8
+                  Amazon-Photo       3       76.9 ± 5.1      75.6 ± 6.3     77.0 ± 4.0         79.4 ± 3.9        66.6 ± 7.7        71.9 ± 5.4       76.8 ± 6.1
+                                     4       81.0 ± 4.6      79.3 ± 5.9     80.1 ± 2.6         81.9 ± 2.9        70.8 ± 6.0        76.2 ± 1.8       82.0 ± 2.3
+                                     20      86.3 ± 1.6      86.5 ± 2.1     84.1 ± 1.5         89.4 ± 1.9        83.5 ± 1.2        86.7 ± 1.5       89.7 ± 1.2
+
+                  Datasets           c       Methods
+                                             GRACE          GCA            SUGRL            AFGRL            NCLA              MHVGCL-MV           MHVGCL-2V
+                                     1       51.0 ± 9.8     58.4 ± 10.9    55.2 ± 8.9       47.7 ± 7.8       63.1 ± 11.2       64.9 ± 11.9         𝟔𝟓.𝟓 ± 𝟏𝟎.𝟐
+                                     2       59.7 ± 7.9     66.0 ± 7.8     65.3 ± 6.2       57.8 ± 6.8       71.8 ± 6.9        𝟕𝟐.𝟑 ± 𝟗.𝟏          71.7 ± 9.8
+                  Cora               3       64.0 ± 6.6     71.5 ± 4.6     70.5 ± 3.5       64.6 ± 4.7       75.7 ± 5.0        𝟕𝟕.𝟏 ± 𝟒.𝟐          76.5 ± 3.6
+                                     4       66.1 ± 5.4     72.9 ± 4.3     73.5 ± 2.9       67.5 ± 4.2       77.3 ± 3.8        𝟕𝟖.𝟐 ± 𝟑.𝟕          77.4 ± 3.4
+                                     20      79.6 ± 1.4     79.0 ± 1.4     81.3 ± 1.2       78.6 ± 1.3       82.2 ± 1.6        82.0 ± 1.3          81.4 ± 1.5
+                                     1       40.3 ± 7.2     38.7 ± 9.0     46.7 ± 8.4       42.1 ± 7.2       52.2 ± 13.5       𝟓𝟔.𝟑 ± 𝟏𝟐.𝟔         54.3 ± 13.3
+                                     2       48.5 ± 6.0     49.6 ± 5.3     57.7 ± 4.6       53.3 ± 5.4       62.2 ± 6.4        64.0 ± 6.4          𝟔𝟓.𝟏 ± 𝟔.𝟗
+                  CiteSeer           3       52.7 ± 4.6     54.2 ± 4.7     61.8 ± 5.1       58.0 ± 4.4       65.5 ± 3.5        66.7 ± 3.3          𝟔𝟕.𝟕 ± 𝟑.𝟕
+                                     4       56.0 ± 3.9     57.3 ± 3.3     65.0 ± 2.6       61.5 ± 2.5       67.6 ± 2.1        67.9 ± 2.4          𝟔𝟗.𝟖 ± 𝟏.𝟗
+                                     20      67.0 ± 1.7     65.6 ± 2.4     71.0 ± 1.8       70.8 ± 2.1       71.7 ± 0.9        𝟕𝟑.𝟎 ± 𝟏.𝟑          72.4 ± 2.0
+                                     1       46.5 ± 7.0     57.7 ± 10.5    56.7 ± 8.8       49.7 ± 8.3       60.2 ± 12.4       62.5 ± 13.6         𝟔𝟓.𝟒 ± 𝟏𝟑.𝟔
+                                     2       53.8 ± 6.9     66.3 ± 7.6     62.9 ± 6.3       56.4 ± 6.4       66.9 ± 9.7        69.7 ± 8.0          𝟕𝟏.𝟗 ± 𝟏𝟎.𝟔
+                  PubMed             3       55.6 ± 7.9     71.9 ± 5.4     67.9 ± 5.7       60.6 ± 5.5       72.3 ± 6.2        74.2 ± 6.7          𝟕𝟓.𝟗 ± 𝟔.𝟐
+                                     4       57.7 ± 6.8     73.6 ± 5.4     69.9 ± 5.1       62.4 ± 5.1       73.8 ± 4.9        75.9 ± 4.2          𝟕𝟕.𝟒 ± 𝟒.𝟎
+                                     20      74.6 ± 3.5     81.5 ± 2.5     80.5 ± 1.6       76.4 ± 2.5       82.0 ± 1.4        82.2 ± 1.3          𝟖𝟐.𝟒 ± 𝟏.𝟏
+                                     1       60.0 ± 7.7     59.9 ± 7.6     76.9 ± 6.2       75.2 ± 7.6       83.0 ± 6.2        𝟖𝟒.𝟎 ± 𝟓.𝟏          83.7 ± 4.9
+                                     2       71.3 ± 4.5     72.5 ± 4.6     85.4 ± 3.1       85.3 ± 2.7       87.4 ± 4.1        𝟖𝟗.𝟏 ± 𝟐.𝟎          88.8 ± 2.5
+                  Coauthor-CS        3       74.8 ± 3.8     77.9 ± 4.1     87.4 ± 2.9       87.7 ± 2.3       88.3 ± 3.1        𝟗𝟎.𝟔 ± 𝟏.𝟕          90.2 ± 2.1
+                                     4       77.6 ± 2.8     80.3 ± 3.1     88.2 ± 2.1       88.4 ± 1.9       88.8 ± 2.4        𝟗𝟎.𝟖 ± 𝟏.𝟒          90.7 ± 1.6
+                                     20      90.0 ± 0.7     90.9 ± 1.1     91.2 ± 0.9       91.4 ± 0.6       91.5 ± 0.7        92.7 ± 0.5          𝟗𝟐.𝟖 ± 𝟎.𝟓
+                                     1       67.0 ± 9.0     55.3 ± 6.7     71.6 ± 6.2       54.4 ± 9.9       75.6 ± 6.0        𝟕𝟗.𝟕 ± 𝟕.𝟗          77.2 ± 5.2
+                                     2       76.6 ± 5.2     68.0 ± 5.6     80.7 ± 3.6       71.3 ± 7.2       81.6 ± 3.7        𝟖𝟒.𝟑 ± 𝟒.𝟗          82.9 ± 3.8
+                  Amazon-Photo       3       78.6 ± 4.8     74.4 ± 5.9     82.2 ± 2.7       75.9 ± 5.7       83.3 ± 3.8        𝟖𝟓.𝟐 ± 𝟓.𝟕          85.1 ± 2.5
+                                     4       81.8 ± 1.4     78.8 ± 3.9     84.3 ± 1.6       81.5 ± 2.5       85.3 ± 2.0        𝟖𝟕.𝟓 ± 𝟏.𝟕          87.4 ± 2.2
+                                     20      87.9 ± 1.4     87.0 ± 1.9     90.5 ± 1.9       89.2 ± 1.1       90.2 ± 1.3        𝟗𝟏.𝟔 ± 𝟏.𝟓          91.1 ± 1.3
+
+
+
+
+MHVGCL, embeddings were acquired in an unsupervised manner, and                          Cora, CiteSeer, and PubMed, we adopted the method proposed in [35],
+subsequently employed to train and test an 𝐿2 -regularized logistic                      randomly selecting 20 nodes per class for training, 500 nodes for
+regression (LR) classifier for semi-supervised node classification. On                   validation and the remaining nodes for test. For Coauthor-CS and
+one hand, we conducted experiments in the setting of extremely scarce                    Amazon Photo, we followed previous methodology [36] by randomly
+labels, where the number of training nodes per class, denoted by 𝑐                       selecting 20 nodes per class for training, 30 nodes per class for vali-
+in Table 5, was selected from the set {1, 2, 3, 4}. In this case with                    dation, and the remaining nodes for test. Regarding the self-supervised
+label scarcity, we followed previous work [33,34] which did not use                      GCL baselines and MHVGCL, the validation set was only utilized for
+a validation set with extra labels for model selection. On the other                     tuning hyperparameters of the LR classifier, and the C parameter of
+hand, we conducted experiments with relatively sufficient labels. For                    the LR classifier was from {1𝑒 − 4, 1𝑒 − 3, 1𝑒 − 2, 0.1, 1, 10, 100}. For each
+
+                                                                                   6
+Y. Wang et al.                                                                                                                                    Applied Soft Computing 171 (2025) 112783
+
+        Table 6
+        Training time (seconds, mean ± std) over 500 epochs with 10 runs: NCLA, MHVGCL-MV, and MHVGCL-2V on Cora dataset with varying numbers of augmented
+        views.
+                            2                 3                 4                 5                 6               7              8                9               10
+          NCLA              3.36 ± 0.22       5.21 ± 0.14       7.10 ± 0.04       9.39 ± 0.26       12.93 ± 0.45    16.99 ± 0.90   19.45 ± 0.51     21.15 ± 0.69    23.70 ± 0.34
+          MHVGCL-MV         1.85 ± 0.21       3.07 ± 0.02       4.06 ± 0.19       5.39 ± 0.03       6.94 ± 0.12     8.19 ± 0.14    10.15 ± 0.07     11.09 ± 0.32    13.65 ± 0.22
+          MHVGCL-2V         1.50 ± 0.01       1.61 ± 0.01       1.67 ± 0.02       1.76 ± 0.02       1.85 ± 0.01     1.91 ± 0.02    1.98 ± 0.02      2.01 ± 0.01     2.13 ± 0.02
+
+
+Table 7                                                                                                 5.2. Computational and memory efficiency comparison
+Training GPU memory usage (MB) comparison: NCLA, MHVGCL-MV, and MHVGCL-2V
+on Cora dataset with different number of augmented views.
+                                                                                                            In this section, we compare self-supervised methods where the
+                 2      3       4         5       6         7       8         9       10
+                                                                                                        training phase and downstream test tasks are separate. To ensure a fair
+ NCLA            1666   1866    2066      2240    2440      2612    2812      2984    3186
+                                                                                                        comparison during training, we set the embedding dimension to 128
+ MHVGCL-MV       1474   1614    1726      1866    1978      2118    2230      2372    2484
+ MHVGCL-2V       1474   1474    1502      1502    1502      1502    1502      1502    1502              across all models, with other settings as default per baseline recom-
+                                                                                                        mendations. For downstream tasks, all methods use the same logistic
+                                                                                                        regression (LR) classifier. Since computational and memory require-
+                                                                                                        ments primarily depend on the embedding dimension, our efficiency
+dataset, we conducted 20 random splits of training/validation/test, and                                 comparison focuses on the training phase, excluding downstream tasks.
+reported the averaged performance across all algorithms on the same
+random splits.                                                                                          5.2.1. Comparison with NCLA
+                                                                                                            Among the baselines, only NCLA can perform contrastive learning
+5. Results                                                                                              with an arbitrary number of views. As claimed, NCLA is an effi-
+                                                                                                        cient graph contrastive learning (GCL) method that does not require
+5.1. Node classification performance                                                                    additional augmentation operations. Therefore, we first compare our
+                                                                                                        method with NCLA using the same number of contrastive views.
+    Table 5 presents the node classification results of our MHVGCL-                                         Table 6 presents a comparative analysis of the training time (in
+2V on five benchmark graph datasets, compared to the performance                                        seconds, showing mean and standard deviation) over 500 epochs for
+of other methods. The reported results for MHVGCL-2V highlight its                                      three methods: NCLA, MHVGCL-MV, and MHVGCL-2V. This compari-
+ability to achieve a better trade-off between performance and effi-                                     son is conducted on the Cora dataset, with the number of augmented
+ciency, even though MHVGCL-MV attains higher performance. These                                         views ranging from 2 to 10. The results indicate that the MHVGCL-
+conclusions are drawn from the following sections of this paper. From                                   MV method outperforms the NCLA method in terms of training time,
+these results, we can make the following key observations:                                              with its training duration increasing at a lower rate as more augmented
+    First, the results comprehensively validate the superiority of our                                  views are introduced. Notably, the MHVGCL-2V method emerges as the
+proposed approach for semi-supervised node classification, which at-                                    most efficient among the three, exhibiting only a modest increase in
+tains superior accuracy across diverse benchmark datasets and varying                                   training time as the number of augmented views increases.
+label scarcity. Specifically, our method consistently outperforms ex-                                       Furthermore, the Table 7 highlights the memory consumption char-
+isting techniques on most settings, frequently by significant margins.                                  acteristics of these methods during the training process. The MHVGCL-
+There are even noticeable gaps (up to 2%) between our approach                                          2V method demonstrates superior memory efficiency, maintaining a
+and leading alternatives (e.g. SUGRL, NCLA) on certain datasets like                                    relatively stable memory footprint across different parameter counts.
+CiteSeer and Amazon-Photo. This implies prospects for refining meth-                                    In contrast, the NCLA method exhibits the highest memory utiliza-
+ods customized to the specific characteristics and distributions of the                                 tion, potentially posing challenges for resource-constrained scenarios or
+dataset, which will be explored in future research. And the overall supe-                               large-scale model training. The MHVGCL-MV method strikes a balance,
+rior and stable performance of our approach across various benchmarks                                   with its memory consumption falling between the other two methods.
+reinforces its reliability.                                                                             Since the training and inference time of downstream tasks is mainly
+    Furthermore, under highly limited labeling conditions, our method                                   determined by the dimension of the embedding 𝐇, and MHVGCL-2V
+substantially outperforms existing advanced methods, surpassing com-                                    contains only two augmented views, its efficiency is evident.
+petitors by over 5% on PubMed with only 1 labeled node per class.
+Meanwhile, the node classification accuracy of all methods improves                                     5.2.2. Comparison with other self-supervised methods
+steadily as more labeled data become available, validating the benefits                                     To comprehensively evaluate the computational and memory effi-
+of increased supervised signals for semi-supervised learning. However,                                  ciency of our proposed MHVGCL-2V method, we conducted a com-
+as more labels are available, the performance gap gradually decreases.                                  parative analysis with other mentioned self-supervised methods, as
+The results strongly demonstrate the MHVGCL’s excellent ability to                                      presented in Table 6. For our method, we report results using 5 aug-
+generalize effectively even with limited supervision. This is attributed                                mented views, which we found to offer an optimal balance between
+to its effectiveness in propagating multi-hop information and learning                                  performance and efficiency.
+robust representations.                                                                                     Our method achieves an average training time of 1.76 s (±0.02)
+    Since the node embedding 𝐇(𝟎) contains no neighborhood infor-                                       over 500 epochs and GPU memory consumption of 1502 MB, outper-
+mation, we tried removing 𝐇(𝟎) in the versions MHVGCL-MV/w0 and                                         forming most existing approaches in terms of efficiency. Notably, it
+MHVGCL-2V/w0, and provide the node class performance of MHVGCL-                                         shows a 5.4% improvement in training speed compared to the next
+MV and its version MHVGCL-MV/w0, as well as MHVGCL-2V and its                                           fastest method, DGI, while maintaining competitive memory usage.
+version MHVGCL-2V/w0 in Fig. 2. As the results show, these versions                                     However, it is important to note that DGI’s efficiency comes with a
+perform almost the same, with MHVGCL-MV(/w0) performing slightly                                        trade-off in node classification performance. Our method’s remarkably
+higher than MHVGCL-2V(/w0) in the majority of cases.                                                    low standard deviation in training time indicates high stability, which
+    In summary, the extensive experiments adequately reveal our                                         are crucial factors in practical applications.
+method’s strengths, especially for generalization given scarce labels.                                      Examining other methods reveals various trade-offs. GRACE and
+The results provide valuable insights into advancing semi-supervised                                    GCA, which require additional data augmentation in each epoch, show
+node classification on graphs.                                                                          increased training times but moderate memory usage. AFGRL, while
+
+                                                                                                7
+Y. Wang et al.                                                                                                              Applied Soft Computing 171 (2025) 112783
+
+
+
+
+Fig. 2. Performance on five datasets with different quantities of labeled nodes within each class for MHVGCL-MV, MHVGCL-MV/w0, MHVGCL-2V, and MHVGCL-2V/w0, where
+MHVGCL-MV/w0 and MHVGCL-2V/w0 denote the versions that perform contrastive learning without node embedding 𝐇(0) . The legend numbers denote the number of labeled
+nodes per class in the training set, consistent across Figs. 3, 4, 5, and 6.
+
+
+efficient in memory usage, has the highest training time due to its k-              for computing the total multi-hop contrastive loss by summing the con-
+means-based class center calculations. GMI and MVGRL exhibit higher                 trastive loss between this pivot view and all other views. In this study,
+memory consumption, likely due to their complex architectures involv-               we employ the MHVGCL-MV model generated with 9 views on the Cora
+ing separate GCN layers and discriminators. It is worth noting that                 and CiteSeer dataset. As depicted in Fig. 3, optimal performance is
+some methods, such as SUGRL, employ an inductive training approach,                 achieved when either the 0-th or 1-th augmentation view is selected
+which fundamentally differs from our transductive method. SUGRL’s                   as the pivot. This is likely because there is more difference between
+use of batch data in training results in lower memory overhead, but it              the 𝑘th (with a larger number) view and the 0-th or 1-th view, which
+struggles with maintaining high performance.                                        contributes more to the contrastive learning process.
+    In conclusion, while each method has its strengths and specific use                 Next, we investigate two additional variations of the proposed
+cases, our MHVGCL-2V offers a compelling combination of efficiency,                 MHVGCL-2V when utilizing different adjacency matrices. 𝐀 and ̂      𝐀 are
+stability, and performance as Table 5 and Table 8 show. However, re-                the unnormalized adjacency matrix and degree-normalized matrix [8],
+searchers should carefully select the appropriate number of augmented               respectively. As shown in Fig. 4, the utilized standardized normalized
+views to weigh the trade-offs between computational efficiency and                  adjacency matrix 𝐀 ̃ consistently yields higher accuracy compared with
+task-specific performance metrics for their applications.                           the unnormalized adjacency matrix variants on the Cora and CiteSeer
+                                                                                    datasets. While the results for ̂ 𝐀 and ̃ 𝐀 are comparable, with each
+5.3. Ablation study                                                                 having its own advantages.
+                                                                                        Additionally, in Fig. 5, the number of augmented views for
+   As mentioned earlier, when there are more than two augmented                     MHVGCL-2V is increased, but it only concatenates the first and the
+views available, one view can be randomly selected as the pivot view                last view to obtain the final node embedding. The results indicate that
+
+                                                                                8
+Y. Wang et al.                                                                                                                        Applied Soft Computing 171 (2025) 112783
+
+             Table 8
+             Comparison of training time and GPU memory usage on Cora dataset with self-supervised methods. Training time (seconds, mean ± std) over
+             500 epochs with 10 runs and GPU memory usage (MB).
+                 Datasets        Methods
+                                 DGI           GMI               MVGRL            GRACE           GCA                 SUGRL         AFGRL           MHVGCL-2V
+                 Training time   1.87 ± 0.35   57.81 ± 1.55      4.95 ± 0.31      3.93 ± 0.49     3.95 ± 0.87         2.05 ± 0.44   94.76 ± 0.92    1.76 ± 0.02
+                 Memory usage    1510          1802              2204             1556            1508                1358          1356            1502
+
+
+
+
+                                                        Fig. 3. Ablation study on the selection of the pivot view..
+
+
+
+
+                                                     Fig. 4. Comparisons between variations of the adjacency matrix.
+
+
+increasing the number of augmented views contributes to improved                         raw data, as well as node embeddings generated by our proposed meth-
+performance in both MHVGCL-MV and MHVGCL-2V, but it also in-                             ods MHVGCL-2V, MHVGCL-MV and the baseline NCLA on the Cora
+troduces increased complexity, especially in the MHVGCL-MV version.                      dataset. Notice that points of the same color within a cluster correspond
+Therefore, it is recommended to generate 4 or 5 views in MHVGCL for                      to instances belonging to the same class. The Calinski–Harabasz index,
+larger datasets to balance performance and complexity.                                   higher index scores indicating better clustering performance, evaluates
+                                                                                         the quality of clustered node embeddings by considering both the
+5.4. Hyperparameter analysis                                                             compactness within clusters and the separation between clusters. The
+                                                                                         comparison of Calinski–Harabasz index scores reveals that MHVGCL-
+    Table 3 and Table 4 show the optimal hyperparameters for MHVGCL-                     MV achieves higher scores than MHVGCL-2V and NCLA, indicating its
+2V and MHVGCL-MV, respectively, due to the differences between the                       superior clustering performance. Although MHVGCL-2V achieves low
+model variants, which result in distinct optimal hyperparameters. Fig. 6                 performance due to the training process involving only two views,
+presents the analysis conducted on the hyperparameters 𝐹 ′ , 𝛼, and 𝜏 of                 we find that concatenating all views in the downstream cluster tasks
+MHVGCL-2V on the Cora, CiteSeer, and Amazon-Photo datasets, respec-
+                                                                                         improves its performance, achieving a Calinski–Harabasz index score of
+tively. Moreover, MHVGCL-2V demonstrates stable performance across
+                                                                                         407.85, which is better than NCLA. The visualization provides a quali-
+various embedding dimensions 𝐹 ′ within the set {16, 32, 64, 128, 256} on
+                                                                                         tative analysis of the distinguishability of the learned node embeddings,
+the Cora dataset, indicating that the hyperparameter 𝐹 ′ has minimal
+                                                                                         complementing our quantitative evaluations.
+impact on achieving optimal results. The trade-off parameter 𝛼, which
+controls the fusion proportion between consecutive augmented views,
+reaches its peak performance at around 1.0. When 𝛼 = 0, no hop                           5.6. Discussion
+information is incorporated. Finally, the temperature parameter 𝜏 has a
+significant influence on the results, aligning with the findings of [2,37].                  In this study, we have demonstrated that MHVGCL achieves strong
+Additionally, setting an appropriately small value for 𝜏 enhances the                    performance on node classification tasks, particularly on homophilic
+performance of MHVGCL-2V on the Amazon-Photo dataset.                                    datasets. When compared with other state-of-the-art graph contrastive
+                                                                                         learning (GCL) methods, MHVGCL shows competitive advantages due
+5.5. Visualization of node embeddings                                                    to its utilization of multi-hop views and the novel multi-hop con-
+                                                                                         trastive loss, effectively capturing both local and global topological
+   To visually depict and compare the quality of embeddings, Fig. 7                      features. MHVGCL builds upon prior work by introducing multi-hop
+presents t-SNE plots [38] and Calinski–Harabasz index scores [39] for                    views generated from a single output head, differentiating it from
+
+                                                                                     9
+Y. Wang et al.                                                                                                         Applied Soft Computing 171 (2025) 112783
+
+
+
+
+                                             Fig. 5. Analysis on the number of the augmented view.
+
+
+
+
+                 Fig. 6. Analysis of the hyperparameters 𝐹 ′ , 𝛼, and 𝜏 in MHVGCL-2V on Cora, CiteSeer and Amazon-Photo datasets.
+
+
+
+
+                                                                       10
+Y. Wang et al.                                                                                                          Applied Soft Computing 171 (2025) 112783
+
+
+
+
+                                                Fig. 7. Visualization of the node embeddings for Cora dataset.
+
+
+traditional GCL methods that rely on augmenting the raw graph input.              6. Conclusion
+In comparison to methods such as GRACE and GCA, which use simpler
+contrastive mechanisms, MHVGCL’s multi-hop neighborhood informa-                      GCL is achieved by maximizing mutual information between nodes
+tion offers a more flexible and comprehensive understanding of node               in augmented graph views generated through graph data augmentation
+relationships, resulting in better discriminative power for node embed-           techniques. Despite recent progress, efficiently and effectively gener-
+dings, especially in cases with scarce labeled data. Furthermore, unlike          ating multiple augmented views to capture comprehensive structural
+computationally demanding methods like MVGRL and NCLA, which                      information remains an open challenge in GCL. To address this gap, we
+generate views directly from the input data, MHVGCL reduces memory                propose an innovative graph contrastive learning framework MHVGCL.
+overhead by generating augmented views after feature transformation.              Our key contributions and results are summarized below:
+Additionally, a variant of MHVGCL-2V is proposed to further reduce
+memory and computation time overhead. For instance, datasets like                     • MHVGCL produces multi-hop views by exploiting multi-hop
+PubMed and Coauthor-CS, which involve large-scale data, benefit sig-                    neighborhood information, which are obtained iteratively from
+nificantly from the reduced memory overhead and faster training times                   a single output head. This preserve the graph topology and can
+                                                                                        bring in both local and global topology and feature information.
+of MHVGCL-2V. This results in more efficient learning without sacri-
+ficing performance, making MHVGCL well-suited for large-scale graph                   • Instead of directly augmenting the raw input data, MHVGCL
+data, though challenges with extremely large datasets still persist.                    generates augmented views after feature transformation which
+    However, there are some limitations to our approach. While                          reduces the dimensionality of the data and can mitigate the issues
+                                                                                        of excessive computational cost and memory overhead.
+MHVGCL has shown promising results on homophilic datasets, its
+performance on heterophilic datasets, where neighboring nodes tend                    • A novel multi-hop contrastive loss is introduced to learn more
+to have different labels, requires further exploration. In such contexts,               robust representations that keeping structural attributes invariant
+the multi-hop views may not capture useful signals as effectively,                      under different augmented views.
+potentially leading to reduced performance. Additionally, MHVGCL’s                   The extensive node classification experiments demonstrate that
+transductive framework poses scalability challenges for extremely large           MHVGCL can learn more discriminative node embeddings and sur-
+datasets due to memory limitations. Our experiments were conducted                pass current advanced approaches even under highly scarce labeling.
+on datasets that fit within a 24G GPU, which may limit applicability to           Future work will involve extending our experiments to a broader
+graphs of larger scales. This constraint is shared by many transductive           range of heterophilic and more challenging large datasets to validate
+GCL methods, and addressing it remains an important direction for                 the generalization and robustness of our method across diverse data
+future research.                                                                  landscapes.
+
+                                                                             11
+Y. Wang et al.                                                                                                                                 Applied Soft Computing 171 (2025) 112783
+
+
+CRediT authorship contribution statement                                                          [13] Y. You, T. Chen, Y. Sui, T. Chen, Z. Wang, Y. Shen, Graph contrastive learning
+                                                                                                       with augmentations, Adv. Neural Inf. Process. Syst. 33 (2020) 5812–5823.
+                                                                                                  [14] Y. Zhu, Y. Xu, F. Yu, Q. Liu, S. Wu, L. Wang, Graph contrastive learning with
+   Yutong Wang: Writing – review & editing, Writing – original draft,
+                                                                                                       adaptive augmentation, in: Proceedings of the Web Conference 2021, 2021, pp.
+Visualization, Validation, Methodology, Investigation, Formal analysis.                                2069–2080.
+Junheng Zhang: Writing – review & editing, Validation, Investigation.                             [15] Y. Zhu, Y. Xu, F. Yu, Q. Liu, S. Wu, L. Wang, Deep graph contrastive
+Ren Cao: Writing – review & editing, Validation, Investigation. Minhao                                 representation learning, In ICML Work. Graph Represent. Learn. Beyond (2020).
+Zou: Writing – review & editing, Visualization, Validation, Methodol-                             [16] H. Xue, X.-K. Sun, W.-X. Sun, Multi-hop hierarchical graph neural networks,
+                                                                                                       in: 2020 IEEE International Conference on Big Data and Smart Computing
+ogy, Investigation, Conceptualization. Chun Guan: Writing – review &                                   (BigComp), IEEE, 2020, pp. 82–89.
+editing, Validation, Supervision, Methodology. Siyang Leng: Writing –                             [17] G. Wang, R. Ying, J. Huang, J. Leskovec, Multi-hop attention graph neural
+review & editing, Supervision, Funding acquisition, Conceptualization.                                 network, Int. Jt. Conf. Artif. Intell. (IJCAI) (2021) 3089–3096.
+                                                                                                  [18] C. Sun, J. Hu, H. Gu, J. Chen, M. Yang, Adaptive graph diffusion networks,
+                                                                                                       2020, arXiv preprint arXiv:2012.15024.
+Declaration of competing interest
+                                                                                                  [19] M. Zou, Z. Gan, Y. Wang, J. Zhang, D. Sui, C. Guan, S. Leng, Unig-encoder: A
+                                                                                                       universal feature encoder for graph and hypergraph node classification, Pattern
+    The authors declare that they have no known competing finan-                                       Recognit. 147 (2024) 110115.
+cial interests or personal relationships that could have appeared to                              [20] X. Chen, K. He, Exploring simple siamese representation learning, in: Proceedings
+influence the work reported in this paper.                                                             of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, 2021,
+                                                                                                       pp. 15750–15758.
+                                                                                                  [21] L. Wu, H. Lin, C. Tan, Z. Gao, S.Z. Li, Self-supervised learning on graphs:
+Acknowledgments                                                                                        Contrastive, generative, or predictive, IEEE Trans. Knowl. Data Eng. 35 (4)
+                                                                                                       (2021) 4216–4235.
+   This work is supported by the STI 2030 - Major Project (No.                                    [22] X. Shen, D. Sun, S. Pan, X. Zhou, L.T. Yang, Neighbor contrastive learning
+                                                                                                       on learnable graph augmentation, in: Proceedings of the AAAI Conference on
+2021ZD0201301), the National Natural Science Foundation of China
+                                                                                                       Artificial Intelligence, vol. 37, 2023, pp. 9782–9791.
+(No. 12471457). This work is also supported by the Science and Tech-                              [23] P. Veličković, W. Fedus, W.L. Hamilton, P. Liò, Y. Bengio, R.D. Hjelm, Deep
+nology Commission of Shanghai Municipality (Nos. 2021SHZDZX0103                                        graph infomax, Int. Conf. Learn. Represent. (ICLR) (2019).
+and 21DZ1201402).                                                                                 [24] Z. Peng, W. Huang, M. Luo, Q. Zheng, Y. Rong, T. Xu, J. Huang, Graph
+                                                                                                       representation learning via graphical mutual information maximization, in:
+                                                                                                       Proceedings of the Web Conference 2020, 2020, pp. 259–270.
+Data availability
+                                                                                                  [25] D. Lee, K. Shin, I’m me, we’re us, and i’m us: Tri-directional contrastive learning
+                                                                                                       on hypergraphs, in: Proceedings of the AAAI Conference on Artificial Intelligence,
+    Data will be made available on request.                                                            37, 2023, pp. 8456–8464.
+                                                                                                  [26] K. Hassani, A.H. Khasahmadi, Contrastive multi-view representation learning on
+                                                                                                       graphs, in: International Conference on Machine Learning, PMLR, 2020, pp.
+References                                                                                             4116–4126.
+                                                                                                  [27] H. Pei, B. Wei, K.C.-C. Chang, Y. Lei, B. Yang, Geom-GCN: Geometric graph
+                                                                                                       convolutional networks, Int. Conf. Learn. Represent. (ICLR) (2020).
+ [1] Y. Tian, D. Krishnan, P. Isola, Contrastive multiview coding, in: Computer Vision–
+                                                                                                  [28] O. Shchur, M. Mumme, A. Bojchevski, S. Günnemann, Pitfalls of graph neural
+     ECCV 2020: 16th European Conference, Glasgow, UK, August 23–28, 2020,
+                                                                                                       network evaluation, 2018, arXiv preprint arXiv:1811.05868.
+     Proceedings, Part XI 16, Springer, 2020, pp. 776–794.
+                                                                                                  [29] S. Wan, S. Pan, J. Yang, C. Gong, Contrastive and generative graph convolutional
+ [2] K. He, H. Fan, Y. Wu, S. Xie, R. Girshick, Momentum contrast for unsupervised
+                                                                                                       networks for graph-based semi-supervised learning, in: Proceedings of the AAAI
+     visual representation learning, in: Proceedings of the IEEE/CVF Conference on
+                                                                                                       Conference on Artificial Intelligence, vol. 35, 2021, pp. 10049–10057.
+     Computer Vision and Pattern Recognition, 2020, pp. 9729–9738.
+                                                                                                  [30] S. Wan, Y. Zhan, L. Liu, B. Yu, S. Pan, C. Gong, Contrastive graph poisson
+ [3] L. Wu, Y. Chen, K. Shen, X. Guo, H. Gao, S. Li, J. Pei, B. Long, et al., Graph neural
+                                                                                                       networks: Semi-supervised learning with extremely limited labels, Adv. Neural
+     networks for natural language processing: A survey, Found. Trends® Mach. Learn.
+                                                                                                       Inf. Process. Syst. 34 (2021) 6316–6327.
+     16 (2) (2023) 119–328.
+                                                                                                  [31] N. Lee, J. Lee, C. Park, Augmentation-free self-supervised learning on graphs, in:
+ [4] T. Shafighfard, F. Kazemi, N. Asgarkhani, D.-Y. Yoo, Machine-learning meth-
+                                                                                                       Proceedings of the AAAI Conference on Artificial Intelligence, vol. 36, 2022, pp.
+     ods for estimating compressive strength of high-performance alkali-activated
+                                                                                                       7372–7380.
+     concrete, Eng. Appl. Artif. Intell. 136 (2024) 109053.
+                                                                                                  [32] Y. Mo, L. Peng, J. Xu, X. Shi, X. Zhu, Simple unsupervised graph representation
+ [5] F. Kazemi, N. Asgarkhani, T. Shafighfard, R. Jankowski, D.-Y. Yoo, Correction:
+                                                                                                       learning, in: Proceedings of the AAAI Conference on Artificial Intelligence, vol.
+     Machine-learning methods for estimating performance of structural concrete
+                                                                                                       36, 2022, pp. 7797–7805.
+     members reinforced with fiber-reinforced polymers, Arch. Comput. Methods Eng.
+                                                                                                  [33] Q. Li, Z. Han, X.-M. Wu, Deeper insights into graph convolutional networks for
+     (2024) 1.
+                                                                                                       semi-supervised learning, in: Proceedings of the AAAI Conference on Artificial
+ [6] T. Shafighfard, F. Kazemi, F. Bagherzadeh, M. Mieloszyk, D.-Y. Yoo, Chained
+                                                                                                       Intelligence, vol. 32, 2018.
+     machine learning model for predicting load capacity and ductility of steel
+                                                                                                  [34] Q. Li, X.-M. Wu, H. Liu, X. Zhang, Z. Guan, Label efficient semi-supervised
+     fiber–reinforced concrete beams, Comput.-Aided Civ. Infrastruct. Eng. (2024).
+                                                                                                       learning via graph filtering, in: Proceedings of the IEEE/CVF Conference on
+ [7] F. Kazemi, T. Shafighfard, D.-Y. Yoo, Data-driven modeling of mechanical
+                                                                                                       Computer Vision and Pattern Recognition, 2019, pp. 9582–9591.
+     properties of fiber-reinforced concrete: a critical review, Arch. Comput. Methods
+                                                                                                  [35] Z. Yang, W. Cohen, R. Salakhudinov, Revisiting semi-supervised learning with
+     Eng. 31 (4) (2024) 2049–2078.
+                                                                                                       graph embeddings, in: International Conference on Machine Learning, PMLR,
+ [8] T.N. Kipf, M. Welling, Semi-supervised classification with graph convolutional
+                                                                                                       2016, pp. 40–48.
+     networks, Int. Conf. Learn. Represent. (ICLR) (2017).
+                                                                                                  [36] M. Liu, H. Gao, S. Ji, Towards deeper graph neural networks, in: Proceedings
+ [9] P. Veličković, G. Cucurull, A. Casanova, A. Romero, P. Lio, Y. Bengio, Graph
+                                                                                                       of the 26th ACM SIGKDD International Conference on Knowledge Discovery &
+     attention networks, Int. Conf. Learn. Represent. (ICLR) (2018).
+                                                                                                       Data Mining, 2020, pp. 338–348.
+[10] M. Zou, Z. Gan, R. Cao, C. Guan, S. Leng, Similarity-navigated graph neural
+                                                                                                  [37] A.v.d. Oord, Y. Li, O. Vinyals, Representation learning with contrastive predictive
+     networks for node classification, Inform. Sci. 633 (2023) 41–69.
+                                                                                                       coding, 2018, arXiv preprint arXiv:1807.03748.
+[11] X. Shen, F.-L. Chung, Deep network embedding for graph representation learning
+                                                                                                  [38] L. Van der Maaten, G. Hinton, Visualizing data using t-sne., J. Mach. Learn. Res.
+     in signed networks, IEEE Trans. Cybern. 50 (4) (2018) 1556–1568.
+                                                                                                       9 (11) (2008).
+[12] W. Hamilton, Z. Ying, J. Leskovec, Inductive representation learning on large
+                                                                                                  [39] T. Caliński, J. Harabasz, A dendrite method for cluster analysis, Comm. Statist.
+     graphs, Adv. Neural Inf. Process. Syst. 30 (2017).
+                                                                                                       Theory Methods 3 (1) (1974) 1–27.
+
+
+
+
+                                                                                             12
+

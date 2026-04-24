@@ -9,52 +9,68 @@ sources: []
 
 # DGD — Decoupled Graph Discrimination
 
-**⚠ UNVERIFIED — abstract-level reading only.** PDF not retrieved as of 2026-04-24. Paper published in Neurocomputing (paywalled ScienceDirect); OpenReview `forum?id=6Cu2sK0yfS` is a listing record with no attached PDF. Tried: ScienceDirect (paywall), OpenReview PDF endpoint (404), ResearchGate (blocked). **The architectural claims below (one-layer MLP encoder, BCE group-discrimination loss, hops-aggregated-not-contrasted) are inferred from abstract paraphrases, not read from the paper.** Must be re-audited via `pdftotext -layout` before citing in paper or relying on the low-pre-emption-risk verdict.
+Gao, Luo, Qi, et al. "When decoupled GCN meets group discrimination: A special graph contrastive learning framework." *Neurocomputing* 596 (2024) 127952.
 
-Neurocomputing 2024. Surfaced during 2026-04-24 literature audit. Tentative positioning: **low pre-emption risk** (subject to PDF verification). Appears to use a different loss family (BCE group discrimination, not InfoNCE) and a different use of hops (aggregate, not contrast), but this must be confirmed from the method section.
-
-**Citation (unverified):** "When decoupled GCN meets group discrimination: A special graph contrastive learning framework", Neurocomputing, 2024. ScienceDirect: https://www.sciencedirect.com/science/article/abs/pii/S0925231224007239. OpenReview (record only, no PDF): https://openreview.net/forum?id=6Cu2sK0yfS.
+PDF verified 2026-04-24 via `raw/papers/DGD.pdf` + `pdftotext -layout` extraction. All claims below traceable to the PDF.
 
 ## One-sentence claim
 
-Extends [[GGD]] (group discrimination, NeurIPS 2022) by replacing the GNN encoder with a one-layer MLP acting on pre-propagated (multi-hop-aggregated) features, plus a "partial corruption" negative-sampling strategy.
+Extends [[GGD]] (group discrimination, NeurIPS 2022) by replacing the GCN encoder with a decoupled MLP pipeline: **fixed-k message passing applied to raw features before training**, a shared-weight MLP encoder, a novel **partial corruption** negative-sampling strategy, and a BCE group-discrimination loss. At inference, an additional `A^m H_θ` skip merges post-encoding global propagation into the final embedding.
 
-## Method (reconstructed from abstract)
+## Method (verified from PDF §3)
 
-1. **Decoupled propagation**: aggregates features across multiple hops of message passing (SGC/SIGN-style), producing a pre-propagated feature matrix.
-2. **Encoder**: one-layer MLP transforms the aggregated features. No GCN.
-3. **Pretext task**: group discrimination (BCE-style) — distinguish real-group embeddings from corrupted-negative-group embeddings.
-4. **Negative sampling**: "partial corruption" — controls the complexity of the pretext task to extract fine structural information.
+**Training pipeline (§3.4):**
+1. **Augmentation**: feature masking `X → X̂` on the clean graph.
+2. **Partial corruption** (§3.3): split `X̂` into two row partitions by parameter α ∈ (0,1); shuffle rows of each part independently to yield corrupted graphs `G̃1, G̃2`; merge back to form `X̃_p` (negative group features). The positive group features are `X̂_p = P(X̂, A)`.
+3. **Message passing view** (§3.2, Eq. 3): `X_k = (A + I)^k X_0` — **a single fixed k**, chosen small for efficiency. Applied to X̂ and to the corrupted matrices to produce `X̂_p` and `X̃_p`.
+4. **MLP encoder** (§3.4): shared-weight `f_θ` (primary MLP) + `p_θ` (projector, single-layer MLP) + `h_θ` (aggregation head with learnable linear parameters). Both positive `X̂_p` and negative `X̃_p` are fed to the same encoder.
+5. **Loss (§3.4, Eq. 2)**: Binary Cross-Entropy on 2N-dim prediction vector (N nodes × 2 groups, labels {1 for positive, 0 for negative}).
+   $$\mathcal{L}_\mathrm{BCE} = -\frac{1}{2N}\sum_{i=1}^{2N} \left[ y_i \log \hat{y}_i + (1-y_i) \log(1-\hat{y}_i) \right]$$
 
-## Architectural differentiators vs. D6c
+**Inference pipeline (§3.5, Eqs. 3-6):**
+1. `X_k = (A+I)^k X_0` — message passing on raw features with the same fixed k.
+2. `H_θ = f_θ(X_k)` — pass through trained MLP encoder (local embedding).
+3. `H_global = A^m H_θ` with m=10 fixed — post-encoding propagation to aggregate multi-hop global info.
+4. `H = H_global + H_θ` — final embedding is local + global skip.
+
+## Architectural differentiators vs. D6c (verified)
 
 | Axis | D6c (ours) | DGD |
 |---|---|---|
-| Propagation timing | Precompute `Â^k X`, keep **K separate depths** | Precompute, **aggregate into single embedding** |
-| Hops as views? | **Yes — hops are the contrast axis** | No — hops are aggregated, not contrasted |
-| Loss | Flat cross-depth InfoNCE | **BCE group discrimination** |
-| Per-depth parameters | W_k per depth | Single MLP on aggregated features |
-| Negatives | Other nodes (any depth) | Corrupted-group samples |
+| Contrast axis | **Same node at different depths (k vs k')** | **Real node (positive group) vs. corrupted node (negative group)** — partial-corruption-based |
+| Loss family | **InfoNCE** (softmax over positives/negatives) | **BCE** (2N-dim binary classification) |
+| Hops at training | **K=5 depths used as distinct views** | **Single fixed k** (chosen small) |
+| Hops at inference | Same K depths | Single k, plus m=10 post-hoc global-embedding skip |
+| Encoder | **None** (per-depth residual W_k) | **MLP stack** (`f_θ` primary MLP + `p_θ` projector + `h_θ` aggregation head) |
+| Propagation order | Precompute `Â^k X`, then residual linear projection | `(A+I)^k X_0` → MLP (propagate-then-MLP, SGC-like) |
+| Augmentation | **None** | **Feature masking + partial corruption** |
 
-## Pre-emption risk: LOW
+**The contrast axis is the fundamental difference.** D6c contrasts same-node-at-different-depths; DGD contrasts real-node-vs-corrupted-node. These are two different SSL pretext tasks.
 
-DGD shares D6c's "decouple propagation from learning, use MLP not GCN" efficiency stance, but:
-1. **Hops aggregated, not contrasted.** DGD collapses the multi-hop signal into one embedding before the loss. D6c's entire mechanism is keeping depths separate and using them as views.
-2. **BCE, not InfoNCE.** Different contrastive objective family. DGD is a GGD descendant; D6c is closer to [[SimCLR]] / [[DINO]] in loss shape.
-3. **No per-depth parameters.** DGD's single MLP cannot lift weak depths differentially the way D6c's W_k ablation shows (see [[Idea Ledger]] C3 / D6a-b fail modes).
+## Experimental scope (from PDF)
 
-DGD is a useful cite for "prior art on decoupled-GCN + SSL" but is not a contrastive-axis competitor.
+Reported datasets (Table in §4): Cora, CiteSeer, PubMed, Amazon-Computers, Amazon-Photo. **DGD does report ogbn-arxiv scale (full-neighborhood sampling per author note §4).** Direct comparison on ogbn-arxiv is feasible and should happen in efficiency benchmark (INQ-008).
+
+## Pre-emption risk: LOW (verified)
+
+DGD shares D6c's "decouple propagation from learning + MLP-only" efficiency stance (a common ancestor), but the contrastive objective is entirely different:
+1. **BCE not InfoNCE.** Different loss family, different optimization landscape.
+2. **Node-vs-corrupted-node not hop-vs-hop.** DGD treats the node as the unit of contrast; D6c treats the depth as the view axis. The two methods ask different discriminative questions.
+3. **Single-k not multi-k at training.** DGD's hops are a fixed-propagation hyperparameter, not a contrastive axis. The "multi-hop" aspect only appears at inference via the `A^m H_θ` skip.
+
+DGD is a useful cite for "prior art on decoupled-GCN + SSL" and for the "MLP-only encoder + precomputed propagation" efficiency lineage. It is not a contrastive-axis competitor.
 
 ## What we need to do
 
-- [ ] Ingest the PDF, record benchmark numbers.
-- [ ] Add row to [[Competitive Landscape 2026]] under the "decoupled / SGC-adjacent SSL" group, alongside [[GGD]] and [[SUGRL]].
-- [ ] One-paragraph related-work cite: "DGD pioneered decoupled-GCN SSL with group discrimination; we take the decoupling further by using per-depth hop views contrastively rather than aggregating them."
+- [x] Ingest the PDF (done 2026-04-24). All claims above verified against `raw/papers/DGD.txt`.
+- [ ] Add row to [[Competitive Landscape 2026]] under "decoupled / SGC-adjacent SSL" group, alongside [[GGD]] and [[SUGRL]].
+- [ ] Include in efficiency benchmark (INQ-008 Config B) if public code exists.
+- [ ] Related-work paragraph: "DGD extends GGD with decoupled-GCN SSL and partial corruption. Like D6c, it is MLP-only over precomputed features; unlike D6c, it retains GGD's node-vs-corrupted-node BCE contrast rather than introducing a depth-as-view axis."
 
 ## Related wiki pages
 
 - [[GGD]] — parent method; group-discrimination loss origin.
-- [[MHVGCL]] — the actual medium-risk pre-emption; MHVGCL has the InfoNCE-over-hops loss.
+- [[MHVGCL]] — the actual medium-risk pre-emption; MHVGCL has the InfoNCE-over-hops loss that DGD lacks.
 - [[Thesis]] — D6c method paper.
-- [[Idea Ledger]] — D6c Live row.
-- [[Competitive Landscape 2026]] — needs DGD row.
+- [[Idea Ledger]] — D6c Live row; reviewer-attack 3 addresses DGD.
+- [[Competitive Landscape 2026]] — needs DGD row (2026-04-24 follow-up).
