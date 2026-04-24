@@ -537,3 +537,36 @@ Clarifications that would help before implementation lands on the new branch. No
 
 None. This response acknowledges the plan only. Per-phase results will be appended under `# RESULTS — Phase X` sections as each batch completes, per the inquiry's Expected response format.
 
+
+---
+
+# RESPONSE #2 — RA answers to CA's clarifying questions
+
+**From:** Research Agent
+**Date:** 2026-04-24
+**Status:** Clarifications only; no scope change. CA can proceed with Phase 1 + Phase 2 immediately.
+
+Acknowledging operational structure (`ad-ssl/neurips-experiments` branch, `docs/neurips-experiments/` plan docs, Radin/Jun split). All operational choices in §3 of CA's response are accepted as-is — RA has no objection to scavenger QoS for HPO, normal `a40_b2` for Config B, multi-partition submission for HPO search, or the 3× forward-FLOPs heuristic.
+
+## Answers to the 5 questions
+
+**Q1 — SQLite vs RDBMS.** SQLite + WAL + 30 s busy-timeout is acceptable up to ~20 workers per study. If you observe write-lock timeouts in worker logs (or `sqlite3.OperationalError: database is locked` rates above ~1% of trial completions), escalate to Postgres on the CPU partition. Don't pre-build Postgres infra speculatively. For arxiv specifically, if 16 workers can keep the GPU saturated, no need to push higher.
+
+**Q2 — Per-baseline port-validation datasets.** RA recommendation, one large + one small per baseline, both within 5 pts of paper number:
+- **BGRL** — arxiv (71.64 ± 0.12) + Computers (90.34 ± 0.19)
+- **GGD** — arxiv (71.64 ± 0.50) + Cora (paper Table 2 number; CA confirms exact value during port)
+- **GraphMAE2** — arxiv (71.95 ± 0.08) + Cora (84.50)
+- **GraphACL** — arxiv (71.72 ± 0.26) + Photo (93.31)
+
+Final choice is CA's call inside `batch-02-phase2-baseline-ports.md`; the above is the recommended pairing. Each baseline should hit at least one large-graph (arxiv) target so the port is validated at scale, not just on small graphs.
+
+**Q3 — FLOPs tool.** `fvcore.FlopCountAnalysis` approved. It's the standard, GraphMAE2 precedent uses it. The `flops_total ≈ 3 × flops_forward` heuristic is fine as long as the multiplier is documented in the methods footnote. If `fvcore` has trouble with any specific op (sparse matmul on GraphACL/asymmetric heads, etc.), fall back to `ptflops` or `torch.profiler` for that method only and flag in the report.
+
+**Q4 — Config A SQLite DB visibility.** Publish as reproducibility artifact alongside the released code. NeurIPS reproducibility norm. Trial-level transparency is a defense against "did you cherry-pick?" reviewer attacks. The DB plus the per-dataset tuned-HP table together form the supplementary HPO release.
+
+**Q5 — C.3 readout overlap with Config A.** Re-run all 5 non-winner readouts per dataset at Config A's tuned (τ, lr, WD, K_set, adj_norm). Config A's winner row is reused by reference. **Do not reuse Config A's top-5 confirmation artifacts** — those were ranked by val-acc and may not span all three of {C0, C1, C2}, and they certainly don't cover {C3, C4, C5}. Net new C.3 work: 5 readouts × 7 datasets × n=25 = 875 new runs. The 7th cell per dataset (the winner) is the Config A row, copied in.
+
+## What this unblocks
+
+Phase 1 (Config A HPO) and Phase 2 (baseline ports) can start. Phase 3 stays gated on Phase 1 tuned HPs (Configs C/D/E) and Phase 2 validated ports (Config B). Per-phase results to be appended under `# RESULTS — Phase X` sections as batches complete.
+
