@@ -9,15 +9,17 @@ sources: []
 
 # MHVGCL — Robust Graph Contrastive Learning with Multi-Hop Views
 
-Wu et al., Applied Soft Computing, January 2025. Surfaced during 2026-04-24 literature audit after D6c-lock as the **closest known architectural ancestor** to our AD-SSL / D6c method. Promoted above [[MVGRL]] on the pre-emption-risk ladder.
+**⚠ UNVERIFIED — abstract-level reading only.** PDF not retrieved as of 2026-04-24. Paper is published in Applied Soft Computing (paywalled ScienceDirect). Tried: ScienceDirect (paywall), ResearchGate (403 blocked), arxiv (no preprint found in 2026-04-24 search). Everything below is inferred from the abstract + secondary web-search paraphrases. **The architectural claims (MLP-before-propagation, single-shared-head, per-epoch cost) are my interpretation of abstract wording, not read from the paper's method section.** Before citing this in the paper or acting on the pre-emption defense, the PDF must be obtained (author email, institutional access, or wait for preprint) and re-audited via `pdftotext -layout` per CLAUDE.md audit discipline.
 
-**Citation placeholder (verify):** "Robust graph contrastive learning with multi-hop views for node classification", Applied Soft Computing, 2025. ScienceDirect: https://www.sciencedirect.com/science/article/abs/pii/S1568494625000948. PDF not yet retrieved; needs ingest via `pdftotext -layout` before any numeric claim from this paper is written to the wiki. Everything below is abstract-level + secondary sourcing.
+Wu et al., Applied Soft Computing, January 2025. Surfaced during 2026-04-24 literature audit after D6c-lock as a **candidate architectural ancestor (unconfirmed)** to our AD-SSL / D6c method. Tentatively placed above [[MVGRL]] on the pre-emption-risk ladder pending PDF verification.
 
-## One-sentence claim
+**Citation (unverified):** "Robust graph contrastive learning with multi-hop views for node classification", Applied Soft Computing, 2025. ScienceDirect: https://www.sciencedirect.com/science/article/abs/pii/S1568494625000948.
 
-Generates multiple contrastive views by iteratively propagating an MLP-encoded "base view" through multi-hop message passing (`MLP(X) → Â · MLP(X) → Â² · MLP(X) → ...`), then maximizes same-node agreement across hops with a contrastive loss, minimizes cross-node agreement.
+## One-sentence claim (abstract-level, unverified)
 
-## Method (reconstructed from abstract + related-work excerpts)
+Generates multiple contrastive views by iteratively propagating an MLP-encoded "base view" through multi-hop message passing (`MLP(X) → Â · MLP(X) → Â² · MLP(X) → ...`), then maximizes same-node agreement across hops with a contrastive loss, minimizes cross-node agreement. **Propagation order (MLP-before-vs-after) inferred from abstract phrasing "generates augmented heads by exploiting multi-hop information, obtained iteratively from a single output head" — not verified against the method section.**
+
+## Method (reconstructed from abstract + web-search paraphrases — UNVERIFIED)
 
 1. **Base view**: `H_base = MLP(X)` — a learned linear/MLP transformation of raw features.
 2. **Multi-hop views**: `H_k = Â^k H_base` for k ∈ {1, 2, ..., K} (order: **MLP then propagate**, APPNP-style).

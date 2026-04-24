@@ -9,9 +9,11 @@ sources: []
 
 # DGD — Decoupled Graph Discrimination
 
-Neurocomputing 2024. Surfaced during 2026-04-24 literature audit. Positioning: **low pre-emption risk** but worth citing as the closest "decoupled-GCN + SSL" precedent. Different loss family (BCE group discrimination, not InfoNCE) and different use of hops (aggregate, not contrast).
+**⚠ UNVERIFIED — abstract-level reading only.** PDF not retrieved as of 2026-04-24. Paper published in Neurocomputing (paywalled ScienceDirect); OpenReview `forum?id=6Cu2sK0yfS` is a listing record with no attached PDF. Tried: ScienceDirect (paywall), OpenReview PDF endpoint (404), ResearchGate (blocked). **The architectural claims below (one-layer MLP encoder, BCE group-discrimination loss, hops-aggregated-not-contrasted) are inferred from abstract paraphrases, not read from the paper.** Must be re-audited via `pdftotext -layout` before citing in paper or relying on the low-pre-emption-risk verdict.
 
-**Citation placeholder (verify):** "When decoupled GCN meets group discrimination: A special graph contrastive learning framework", Neurocomputing, 2024. ScienceDirect: https://www.sciencedirect.com/science/article/abs/pii/S0925231224007239. OpenReview: https://openreview.net/forum?id=6Cu2sK0yfS. PDF not yet retrieved.
+Neurocomputing 2024. Surfaced during 2026-04-24 literature audit. Tentative positioning: **low pre-emption risk** (subject to PDF verification). Appears to use a different loss family (BCE group discrimination, not InfoNCE) and a different use of hops (aggregate, not contrast), but this must be confirmed from the method section.
+
+**Citation (unverified):** "When decoupled GCN meets group discrimination: A special graph contrastive learning framework", Neurocomputing, 2024. ScienceDirect: https://www.sciencedirect.com/science/article/abs/pii/S0925231224007239. OpenReview (record only, no PDF): https://openreview.net/forum?id=6Cu2sK0yfS.
 
 ## One-sentence claim
 
