@@ -3,72 +3,97 @@ title: Thesis
 type: synthesis
 tags: [neurips-2026, thesis, ad-ssl]
 created: 2026-04-21
-updated: 2026-04-21
+updated: 2026-04-24
 sources: [[RESEARCH_AGENT_ONBOARDING]]
 ---
 
-# Thesis — AD-SSL for Scalable Unsupervised Graph Representation Learning
+# Thesis — Cross-Depth Contrastive SSL on Precomputed Multi-Depth Features
 
-**Paper codename:** AD-SSL (Adaptive-Depth Decoupled Self-Supervised Learning)
+**Paper codename:** AD-SSL (legacy; "adaptive depth" framing was dropped 2026-04-24 after INQ-007 closed α-on-top-of-D6c as adding nothing). A finalized paper name is TBD; candidates: **CDC-SSL** (Cross-Depth Contrastive SSL), **DepthC-GCL** (Depth-Contrastive Graph CL). Internal vault name SUGRL remains for git history; the starting-point [[SUGRL]] method is unrelated to the final contribution.
 **Target venue:** NeurIPS 2026
-**Internal vault name:** SUGRL (legacy; refers to the starting-point method, not the final contribution)
+**Methods page:** [[Idea Ledger]] § Live D6c.
 
 ## One-sentence claim
 
-AD-SSL matches the accuracy of expensive unsupervised graph SSL methods (e.g. [[BGRL]], [[GraphMAE]]) on ogbn-arxiv (~71) at the wall-clock cost of cheap methods (e.g. [[GGD]], seconds). **No published method currently occupies this Pareto point.** See [[Pareto Gap]].
+Cross-depth instance-discrimination contrastive learning on precomputed multi-depth features `X_k = Â^k X`, with a residual `F_in`-preserving per-depth linear projection, produces a linear-probe representation that **strictly exceeds the best single-depth probe** on Cora (+3.14), Computers (5/5 seeds above bar, mean +0.71), and ogbn-arxiv (+8.05 on concat readout). The method has **no encoder, no augmentation, no per-epoch GNN forward pass, and no adaptive-depth routing**; depth itself is the contrastive view axis.
 
-## Mechanism (how it works)
+## Mechanism (how the method works)
 
-1. **Pre-compute** `X_k = Â^k X` for k ∈ {1, 2, 4, 8}. One-time sparse matmul. Inherits the decoupled precompute trick from [[SGC]]. See [[Decoupled Precompute]].
-2. **Shared MLP encoder** maps each X_k → Z_k. Same weights across all depths.
-3. **Base loss: InfoNCE across depth pairs** (locked 2026-04-22 via [[INQ-2026-04-22-001]], provisional pending diagnostics). The paper's novelty is the **adaptive-depth + decoupled-precompute** story; the loss is orthogonal. Bootstrap cosine (initial plan) collapsed empirically without negatives or augmentation — multi-depth views alone don't break symmetry for a pure bootstrap objective. InfoNCE's in-batch negatives fix this. Bootstrap is retained as an A-series ablation. See [[Bootstrap Loss]] for the alternative framing.
-4. **Per-node adaptive depth weighting** via group-relative ranking: for each node, each depth is scored by how well it aligns with the consensus of the other depths; softmax gives weights. See [[Multi-Depth Views]] and [[Adaptive Depth Weighting]].
-5. **Inference:** Z_final = weighted average of Z_k.
+1. **Precompute** `X_k = Â^k X` for k ∈ {0, 1, 2, 4, 8}. One-time sparse matmul at dataset-load time. Inherits [[Decoupled Precompute]] from [[SGC]] / [[SIGN]].
+2. **Per-depth residual linear projection**: `Z_k = X_k + W_k X_k`, where `W_k ∈ R^{F_in × F_in}` is a trainable linear map, one per depth. Residual skip guarantees `Z_k` information floor ≥ raw `X_k` — the representation cannot degrade below the raw multi-depth ensemble regardless of what InfoNCE does to `W_k`.
+3. **Flat cross-depth InfoNCE** (no per-pair weighting, no entropy routing):
+   - Positive pairs: `(Z_k[i], Z_{k'}[i])` for the same node `i` at any two different depths `k ≠ k'`.
+   - Negative pairs: `(Z_k[i], Z_{k'}[j])` for different nodes `j ≠ i` at any depths.
+   - Loss: standard InfoNCE with temperature `τ_c = 1.0`.
+4. **Readout** (default): `Z_concat = [Z_0 ‖ Z_1 ‖ ... ‖ Z_K] ∈ R^{(K+1)·F_in}` fed to a linear probe. `Z_mean = (1/K) Σ_k Z_k` is a secondary readout; near-tied with concat on Cora/Computers but **concat beats mean by +3.43 on ogbn-arxiv** because arxiv's per-depth quality variation is large (raw k=2 = 60.28 vs k=8 = 50.82).
 
-No augmentation, no GNN forward pass during training. Negatives come from the InfoNCE batch (in-batch nodes), not from an explicit graph-structural sampler. Per-epoch cost `O(N·d²)`.
+**Training hyperparameters (paper-default):** 200 epochs, Adam lr=0.01, WD=5e-4 on W_k (required — V-WD variant without WD drops Computers below the hard bar), τ_c=1.0. Matched-seed protocol: 5 seeds on Cora/Computers/arxiv per [[Splits and Protocol]], 5 linear-probe restarts per seed.
 
 ## Why this is novel
 
-- Multi-depth precomputed features as contrastive views — not done in unsupervised GRL.
-- Per-node adaptive depth weighting via group-relative ranking — not done in graph SSL.
-- Supervised adaptive-depth work exists ([[GPRGNN]], [[APPNP]], [[ATP]]) but not in the unsupervised regime.
+- **Depth as the contrastive view axis.** Prior graph contrastive methods use augmentations ([[GraphCL]], [[BGRL]]), spectral filter views ([[PolyGCL]]), or fixed structural views like adjacency-vs-PPR ([[MVGRL]]). None use propagation depth — `Â^k X` at different `k` — as the axis of contrast, and certainly none do it at precompute time with no encoder.
+- **No encoder, no per-epoch GNN.** Every baseline that comes close on wall-clock cost ([[GGD]], [[SUGRL]]) operates at a single fixed propagation depth, losing the multi-scale signal. Every baseline that operates at multiple scales runs a GNN encoder per epoch per view. D6c is the first method to do multi-scale contrast at single-epoch-MLP cost.
+- **Residual projection is load-bearing.** Ablations in [[INQ-2026-04-23-003]] show the residual is what makes the method work: D6a (linear d_proj=128, no residual) fails Computers by −5.14 because WD-shrinkage makes Z_k collapse to zero; D6b (linear d_proj=F_in, no residual) fails Computers by −7.21; only D6c's `Z_k = X_k + W_k X_k` preserves the raw-feature floor while learning cross-depth discriminative structure on top.
 
-See [[Novelty Verification Checklist]].
+See [[Novelty Verification Checklist]] for claim-level 🔴/🟡/🟢 ablation status (needs update 2026-04-24).
 
-## Why we believe this will work
+## Why this works (mechanism story)
 
-From [[Preliminary Validation - 168 Runs]]: six SUGRL-style sampling tweaks failed to move ogbn-arxiv (all within ±0.13 of baseline). **The only thing that moved ogbn-arxiv was changing propagation depth** (k=1 → k=3, +0.80 with 3/3 seeds positive). See [[Prepropx Depth Finding]]. Depth is the axis to exploit; AD-SSL makes depth learnable per-node.
+**The oversmoothing problem, reframed as a contrastive signal.** Deep propagation causes per-node features to collapse toward class centroids — the simplex collapse theorem of Ji et al. 2025 (see [[Rethinking graph neural networks from a geometric perspective of node features]]). On homophilic graphs, this means `Â^k X` at large `k` loses instance-level detail but preserves class structure; small `k` keeps detail but lacks neighborhood context. Neither extreme is ideal alone.
 
-## Four insights being ablated
+Cross-depth InfoNCE treats this as a feature: the *same node's* features at different depths are pulled together (positive pairs) while *different nodes at any depth* are pushed apart (negatives). This is the learnable equivalent of an ensemble over depths — W_k learns to project each depth into a shared space where the node-discrimination signal from every depth converges, even when some depths are "collapsed" (deep) and others are "raw" (shallow).
 
-Internal naming (does **not** go in paper). The "GRPO / KTO / SimPO / Online-DPO" tags are **RL-alignment analogies used during brainstorming** to import structural patterns (group-relative ranking, binary preference, simplified objective, iterative EMA preference) into graph SSL. The graph mechanism stands on its own — the analogy is scaffolding only.
+Empirically this LIFTS weak depths, sometimes dramatically: on Cora raw k=0 = 46.95 → post-D6c k=0 = 76.57 (+29.62); on arxiv raw k=8 = 50.82 → 67.74 (+16.92). On Computers where the strongest single depth (k=1) is already near-optimal, the lift is smaller but every depth still improves, and the concat/mean readout ensemble crosses the hard bar.
 
-Baseline **B0** = uniform depth weights, **InfoNCE across depth pairs** (2026-04-22 update; bootstrap cosine collapsed in CA's §6-strict trial — see [[INQ-2026-04-22-001]]), no refinement. See [[Ablation Plan - AD-SSL B0 A1-A4]].
+## Three-dataset primary result (INQ-007, 2026-04-24)
 
-| Insight | Brainstorm tag (RL analogy) | What it does in AD-SSL | Maps to [[Novelty Verification Checklist]] |
-|---|---|---|---|
-| A1 | GRPO-style | Per-node α_{i,k} weighting from cross-depth consistency (analogous to group-relative advantage across a set of candidates) | Claim 1: per-node adaptive depth. 🔴 global-γ SSL ablation, 🔴 best-fixed-k sweep. |
-| A2 | KTO-style | Binary quality signal (does the node's kNN in embedding space match its graph neighbors?), asymmetric loss on good-vs-bad pairs | Claim 2 variant: alternative to bootstrap. Paired with 🔴 bootstrap-vs-DGI-BCE swap as a "what loss is the right self-sup signal" study. |
-| A3 | SimPO-style | Swap bootstrap for simpler losses (MSE, InfoNCE) to isolate whether EMA target + predictor is actually load-bearing | Claim 2: bootstrap justification. 🔴 bootstrap-vs-DGI-BCE swap covers the InfoNCE side; MSE variant is an extra column. |
-| A4 | Online-DPO-style | EMA-smoothed iterative refinement of α_{i,k} across epochs (preference-style update rather than direct gradient) | Claim 1 extension: stability of per-node α. Currently 🟡 — gated on A1 passing. |
+| Dataset | Seeds × restarts | Raw best-k | Raw mean-pool | D6c Z_mean | D6c Z_concat | Δ vs best-k (Z_concat) |
+|---|---|---|---|---|---|---|
+| Cora | 5 × 5 = 25 | 78.87 (k=8) | 76.25 | 82.01 ± 0.29 | **82.05 ± 0.34** | **+3.18** |
+| Computers | 5 × 5 = 25 | 87.53 (k=1) | 86.10 | 88.24 ± 0.42 | 87.96 ± 0.30 | +0.43 (Z_mean +0.71) |
+| ogbn-arxiv | 5 × 5 = 25, official split, CE probe | 60.28 (k=2) | 59.12 | 64.90 ± 0.10 | **68.33 ± 0.06** | **+8.05** |
 
-## Outcome scenarios
+**Key stats:**
+- **Cora**: 14σ+ hard pass across seed-restart combinations.
+- **Computers**: 5/5 per-seed Z_mean ∈ {87.75, 88.71, 88.34, 87.74, 88.64}, all strictly > 87.53; 3.8σ in stderr.
+- **arxiv**: tightest stds observed in the project (0.06–0.10); best-val ≡ final-epoch to ±0.01.
 
-- **Optimistic:** B0 ~70, A1 → ~71. Headline: "multi-depth views + adaptive weighting = BGRL accuracy at GGD cost."
-- **Realistic:** B0 ~69.5, one insight adds +0.3–0.5. Headline: "depth is the underexploited axis; even uniform multi-depth is competitive."
-- **Pessimistic:** B0 ≈ SUGRL-k=3 (~69.5), no insight helps. MLP encoder is the bottleneck → pivot.
+## Scope (locked 2026-04-21, reaffirmed 2026-04-24)
 
-Gates captured in [[Project Phases and Decision Gates]].
+- **Homophilic graphs only.** Evaluation on Cora, Computers, ogbn-arxiv (confirmed); CiteSeer, PubMed, Photo, CS planned as Phase-2 extensions. Heterophilic benchmarks (Chameleon, Squirrel, Texas, Actor, Wisconsin) are **out of scope for v1** — mechanism relies on the simplex-collapse regime of homophilic features (see Ji et al. 2025). On heterophily, different depths point in genuinely different class directions; cross-depth InfoNCE would pull apart legitimately different semantic views, likely hurting. Future work.
+- **Per-dataset training.** AD-SSL is pretrained and evaluated on the same graph. Cross-graph pretrain-and-transfer is a separate problem benchmarked by [[GSTBench]]; we cite it and operate outside the transfer regime. No "foundation model" framing.
 
-## Scope (locked 2026-04-21)
+## Outcome scenarios (2026-04-24 read)
 
-- **Graph regime: homophilic graphs only.** Evaluation on ogbn-arxiv, ogbn-products, Cora/Citeseer/PubMed. Heterophilic benchmarks (Chameleon, Squirrel, Texas, Actor, Wisconsin) are **out of scope for v1** — clearly marked as future work. This matches the scope of every baseline on our Pareto frontier: [[GGD]], [[SUGRL]], [[BGRL]], [[GraphMAE2]] all restrict to homophilic graphs. Methods that do claim heterophily ([[PolyGCL]], [[GraphACL]]) engineer for it explicitly (spectral high-pass channel / asymmetric predictor) — AD-SSL's monotone-low-pass depth views do not, and retrofitting a high-pass view is an architectural change we defer.
-- **Training regime: per-dataset training.** AD-SSL is pretrained and evaluated on the same graph, following the field default (every SSL baseline above does the same). Cross-graph pretrain-and-transfer is a **separate open problem** benchmarked by [[GSTBench]] (CIKM 2025), which finds contrastive methods fail at it and only masked-reconstruction ([[GraphMAE2]]) transfers. We cite GSTBench and position AD-SSL outside that regime. No "foundation model" framing.
+- **Realistic (current):** 3-dataset primary table above, +3–8 pts over best-single-depth, holds up on 4+ more homophilic datasets in Phase 2, delivers a clean Pareto point on ogbn-arxiv against [[GGD]] and [[BGRL]]. Headline: "depth-as-contrastive-view at precompute time beats best-single-depth on every homophilic benchmark tested, at wall-clock cost comparable to GGD."
+- **Optimistic:** mechanism generalizes to ogbn-products and maybe [[Graph Learning Poor Benchmarks]] coverage improves the benchmarking rigor defense. Novel NeurIPS acceptance.
+- **Pessimistic:** Phase-2 datasets show regression (e.g. Photo, where raw best-k is already ~92, leaves little room). We'd need a smaller-per-dataset-gain but more-mechanism-analysis angle — still a paper, but less headline-clear.
 
-These two decisions determine the shape of the main table and the introduction; they also remove Claim 5 (heterophily) and the "transfer probe" defensive gap from [[Novelty Verification Checklist]].
+Gates captured in [[Project Phases and Decision Gates]] (needs update 2026-04-24).
 
-## Known risks
+## Things formally retired by D6c-lock (2026-04-24)
 
-- **[[Less is More]]** (arxiv 2509.25742 v3, ICLR 2026 submission) — closest concurrent work. GCN + MLP as 2 complementary views with global β weighting and direct cosine loss. Differences with AD-SSL: (1) 2 views vs our K; (2) global β vs our per-node α_{i,k}; (3) direct alignment vs our bootstrap. Scale: they hit Arxiv-year (169k nodes, different task) but not standard ogbn-arxiv/products. See [[AD-SSL vs Less is More]].
-- MLP-only encoder may be the ceiling, not depth diversity.
-- Reviewers may collapse us to "GPRGNN + BGRL" — our defense in [[Reviewer Attacks and Defenses]].
+- **"Adaptive-Depth SSL" framing.** α-routing on top of D6c moves the probe by ≤+0.01 at any τ_p on any of three datasets tested (INQ-007 Config C). The adaptive-depth hook is surplus; the paper does not claim learned per-node depth routing. See [[Idea Ledger]] C4 and V2 closures.
+- **The four-insight A1–A4 RL-analogy ablation plan** (GRPO/KTO/SimPO/Online-DPO analogies from [[RESEARCH_AGENT_ONBOARDING]]). The original insights were tied to learned per-node α, which is gone. Ablations for D6c are: (i) readout (Z_mean vs Z_concat), (ii) residual vs linear, (iii) K_SET (which depths), (iv) τ_c (InfoNCE temperature), (v) WD regime. See [[Ablation Plan - AD-SSL B0 A1-A4]] (needs rewrite 2026-04-24).
+- **[[Bootstrap Loss]] as primary.** Early 2026-04-22 pivot from bootstrap → InfoNCE held; InfoNCE is the paper's loss. Bootstrap may return as a B-series ablation column.
+- **The multi-depth MLP-encoder architecture** originally sketched in [[AD-SSL]] and [[Ablation Plan - AD-SSL B0 A1-A4]]. D6c has no encoder; it has per-depth linear projection with residual.
+
+## Known risks and reviewer attacks (audit 2026-04-24)
+
+- **Pre-emption risk (medium):** [[MVGRL]] (Hassani & Khasahmadi 2020) is the closest ancestor — contrasts adjacency vs PPR diffusion, 2 views through a GNN encoder per epoch. Architecturally apart from D6c (K views, no encoder, precompute-only) but reviewers may collapse the distinction. **Defense needed:** sharper differentiator on "multi-scale precompute vs per-epoch view generation."
+- **"This is just SGC + InfoNCE":** No — [[SGC]] is supervised and uses a single fixed depth; D6c uses K depths contrastively without labels.
+- **Computers +0.71 is marginal.** On datasets where raw best-k is near saturation (Photo, CS likely candidates), the gain may be small. Defense: mechanism story + mean-of-means across 6+ datasets.
+- **Residual is almost-trivial architecturally.** Strength: makes the method minimal and reproducible. Weakness: reviewers may ask "why does this paper exist." Defense: the ablation table (D6a/D6b without residual fail Computers hard) shows residual is load-bearing, not decoration.
+- **Homophily-only scope.** Inherits from every comparable baseline ([[GGD]], [[SUGRL]], [[BGRL]], [[GraphMAE2]]). Not a differentiator risk.
+
+Full defenses in [[Reviewer Attacks and Defenses]] (needs 2026-04-24 update).
+
+## Related wiki pages
+
+- [[Idea Ledger]] — live D6c entry with full INQ-003/INQ-007 numbers.
+- [[Pareto Gap]] — fast-vs-accurate framing, updated 2026-04-24 with the new result.
+- [[Competitive Landscape 2026]] — baseline numeric table.
+- [[Reviewer Attacks and Defenses]] — anticipated objections (needs update).
+- [[Novelty Verification Checklist]] — per-claim ablation status (needs update).
+- [[Rethinking graph neural networks from a geometric perspective of node features]] — Ji et al. 2025 simplex collapse theorem, the mechanism backbone.
+- [[INQ-2026-04-23-003]], [[INQ-2026-04-23-004]] — source inquiries for the primary result.
