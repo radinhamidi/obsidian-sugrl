@@ -316,6 +316,87 @@ Matched hardware: all D6c and SUGRL runs on Vector A40-48GB, partition `a40_b2`,
 
 **Other baselines (BGRL / GraphMAE / PolyGCL / GGD / MHVGCL):** not run. No implementations in the current repo. Reproducing them requires cloning each authors' code and harmonizing data loading — flagged here per the inquiry's explicit reproduction-failure allowance. If RA wants these, CA can either (a) cite their paper numbers with a "different hardware, authors' numbers" caveat, or (b) CA implements them from scratch, which is multi-day engineering per baseline.
 
+# DIAGNOSTIC RESULTS — Config B (matched-codebase rerun)
+
+Rerun of Config B with both methods sharing the same experimental shell: `ad_ssl/data.py::load_dataset` (same splits per seed), `ad_ssl/data.py::seed_everything`, identical timing pattern, `torch.cuda.max_memory_allocated` for both. Method-specific choices preserved: D6c uses its sym-norm adjacency (and an additional `--adj_norm row` arxiv variant); SUGRL uses paper-faithful adjacency (sym-norm non-arxiv, row-norm arxiv), multiplet loss from `train.py`, and `args.yaml` probe hyperparameters. 5 seeds × 5 probe restarts = n=25 for both.
+
+New module: `ad_ssl/experiments/adssl_sugrl.py`.
+
+**Headline comparison (matched n=25, matched harness):**
+
+| Dataset | Method | Readout | Probe test-acc | Seeds-used | Train wall-clock (/seed) | Peak CUDA mem | Epochs trained |
+|---|---|---|---|---|---|---|---|
+| Cora | D6c | Z_mean | 82.04 ± 0.32 | 0-4 | 12.2 s | 866 MB | 200 |
+| Cora | D6c | Z_concat | 81.92 ± 0.36 | 0-4 | 12.2 s | 866 MB | 200 |
+| Cora | SUGRL | — | 81.74 ± 0.46 | 0-4 | 34.2 s | 92 MB | 500 (no early stop triggered) |
+| Computers | D6c | Z_mean | 88.11 ± 0.40 | 0-4 | 29.5 s | 2524 MB | 200 |
+| Computers | D6c | Z_concat | 87.93 ± 0.31 | 0-4 | 29.5 s | 2524 MB | 200 |
+| Computers | SUGRL | — | 83.25 ± 0.67 | 0-4 | 36.7 s | 275 MB | 210 (early-stopped) |
+| ogbn-arxiv | D6c-sym | Z_mean | 64.89 ± 0.12 | 0-4 | 115.1 s | 18 201 MB | 200 |
+| ogbn-arxiv | D6c-sym | Z_concat | 68.31 ± 0.07 | 0-4 | 115.1 s | 18 201 MB | 200 |
+| ogbn-arxiv | D6c-row | Z_mean | 66.04 ± 0.11 | 0-4 | 115.4 s | 18 201 MB | 200 |
+| ogbn-arxiv | D6c-row | Z_concat | 68.46 ± 0.08 | 0-4 | 115.4 s | 18 201 MB | 200 |
+| ogbn-arxiv | SUGRL | — | 63.29 ± 1.00 | 0-4 | 23.1 s | 1944 MB | 100 |
+
+**Per-seed probe values:**
+
+Cora:
+| Seed | D6c Z_mean | D6c Z_concat | SUGRL |
+|---|---|---|---|
+| 0 | 81.96 | 81.40 | 82.26 |
+| 1 | 81.64 | 82.02 | 81.22 |
+| 2 | 81.82 | 81.64 | 81.32 |
+| 3 | 82.44 | 82.26 | 82.16 |
+| 4 | 82.32 | 82.28 | 81.72 |
+
+Computers:
+| Seed | D6c Z_mean | D6c Z_concat | SUGRL |
+|---|---|---|---|
+| 0 | 87.58 | 87.86 | 84.37 |
+| 1 | 88.52 | 88.31 | 83.02 |
+| 2 | 88.31 | 87.73 | 82.52 |
+| 3 | 87.68 | 87.51 | 83.59 |
+| 4 | 88.45 | 88.25 | 82.75 |
+
+ogbn-arxiv:
+| Seed | D6c-sym Z_mean | D6c-sym Z_concat | D6c-row Z_mean | D6c-row Z_concat | SUGRL |
+|---|---|---|---|---|---|
+| 0 | 65.03 | 68.39 | 66.10 | 68.55 | 63.43 |
+| 1 | 65.00 | 68.20 | 66.06 | 68.45 | 63.30 |
+| 2 | 64.78 | 68.31 | 65.84 | 68.33 | 63.47 |
+| 3 | 64.75 | 68.27 | 66.02 | 68.43 | 63.67 |
+| 4 | 64.88 | 68.38 | 66.17 | 68.55 | 62.58 |
+
+**Per-epoch cost (same hardware A40-48GB):**
+
+| Dataset | D6c mean-epoch | SUGRL mean-epoch |
+|---|---|---|
+| Cora | 60.9 ms | 14.0 ms |
+| Computers | 147.4 ms | 19.9 ms |
+| ogbn-arxiv | 575.4 ms | 68.3 ms |
+
+**SUGRL early-stopping (n=5):** Cora 500/500 epochs (no stop triggered); Computers stopped at 210 (best-val median 84.12); arxiv ran the full budget of 100 epochs (stop check-every=10 with patience=20 did not trigger).
+
+**Precompute (feature + adjacency setup):**
+
+| Dataset | D6c (first/cached) | SUGRL |
+|---|---|---|
+| Cora | 5.95 s / 0.14 s | 1.53 s |
+| Computers | 8.08 s / 2.71 s | 7.88 s |
+| ogbn-arxiv | 9.74 s / 1.54 s | 18.04 s |
+
+**SUGRL reproduction vs original `train.py` numbers (both Vector A40):**
+
+| Dataset | SUGRL-matched (5 seeds, new harness) | SUGRL (train.py, INQ-Config-B original, fixed seed=0 × 5 trials) |
+|---|---|---|
+| Cora | 81.74 ± 0.46 | 83.23 ± 0.35 |
+| Computers | 83.25 ± 0.67 | 88.51 ± 0.22 (n=4; trial 5 killed) |
+| ogbn-arxiv | 63.29 ± 1.00 | 69.04 ± 0.06 |
+
+n=5 seeds in matched harness each use a different Option B split for Computers (5 distinct train/val/test permutations); original train.py run used fixed seed=0 × 5 model inits (single split). Cora + arxiv splits are fixed across seeds in both harnesses. Original `train.py` used 2 probe restarts + lr2/wd/num1 from `args.yaml`; matched harness uses 5 probe restarts with the same lr2/wd/num1.
+
+**Other baselines (BGRL, GraphMAE, PolyGCL, GGD, MHVGCL):** still not run. Same rationale as the earlier Config B entry: no implementations in-repo.
+
 # Configs C and D — skipped
 
 Per inquiry's "skip gracefully if capacity-limited" allowance. Config A + Config B (partial, as noted) consumed the available CA capacity in this round. Both Config C (K_SET ablation) and Config D (τ_c sweep) remain queueable if RA wants them in a followup.
