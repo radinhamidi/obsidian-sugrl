@@ -5,9 +5,9 @@ topic: D6c final experiments plan — HPO, efficiency, ablation, sensitivity, me
 from_agent: Research Agent
 to_agent: Coding Agent
 created: 2026-04-24
-responded:
+responded: 2026-04-24
 priority: high
-status: open
+status: answered
 related_files:
   - raw/inquiries/INQ-2026-04-24-001-d6c-phase2-datasets-and-efficiency-benchmark.md
   - wiki/synthesis/Thesis.md
@@ -495,4 +495,45 @@ Per config, CA should:
 
 # RESPONSE
 
-<!-- CA will fill this in -->
+**From:** Coding Agent
+**Date:** 2026-04-24
+**Status:** Execution plan acknowledged; implementation not started. No results to report yet.
+
+## 1. Acknowledgement
+
+Received the full five-config plan (A: Optuna HPO, B: efficiency benchmark, C.1–C.4: ablations, D: sensitivity, E: mechanism). Scope (7 homophilic datasets), split protocol, trial-count policy (N=5 × 5 probe restarts, bump to N=10 only if stderr > 0.5 pts), and paper deliverable mapping are all noted as-is. No infeasibility flags on the scientific spec.
+
+## 2. Execution structure
+
+- **New working branch**: `ad-ssl/neurips-experiments`, cut from `main`. Previous `ad-ssl/d6c-phase2` branch (which closed INQ-001) stays frozen as the experimental history.
+- **Plan docs checked in** at `docs/neurips-experiments/` on `main`:
+  - `README.md` — index + batch dependency table
+  - `master-plan.md` — whole plan, paper deliverable mapping, implementation checklist
+  - `vector-slurm-reference.md` — QoS tiers, partitions, per-phase QoS picks
+  - 9 `batch-NN-*.md` files — one per runnable batch (Config A, Phase 2 ports, Config B, C.1, C.2, C.3, C.4, D, E)
+- **Who runs what**: Radin owns harness implementation, variant flags, port code, inquiry responses. Jun (collaborator, Vector access) runs the sbatch batches per the batch docs. Radin reviews results before RA-facing reporting.
+- **Execution order**: Phases 1 (Config A HPO) and 2 (baseline ports) start in parallel, no upstream deps. Phase 3 (Configs B, C.1–C.4, D, E) gated on Phase 1 tuned HPs and, for Config B, Phase 2 validated ports.
+
+## 3. Operational choices (no science-spec changes)
+
+- **Optuna storage**: SQLite per dataset, WAL mode + 30 s busy-timeout, ~16 concurrent workers per study. Escalation path if lock contention surfaces: dedicated orchestrator or RDB. Studies retained as reproducibility artifacts.
+- **HPO QoS**: `scavenger` (unlimited GPUs, 4-day walltime, preemptible) for search workers. Optuna resumes from SQLite on preempt, so churn is tolerable. Final-headline (top-1 n=25) runs on `normal` for stable timing.
+- **Config B QoS**: `normal` on `a40_b2` only — non-preempted, single GPU type across all method × dataset cells for comparability.
+- **Multi-partition submission** (`--partition=t4v2,rtx6000,a40_b2`) used for HPO search where hardware-timing noise is irrelevant. Fixed `a40_b2` for Config B and arxiv (memory).
+- **FLOPs instrumentation**: planning to use `fvcore.FlopCountAnalysis` for forward-pass count; report `flops_total_estimate = 3 × flops_forward` per the usual forward:backward ≈ 1:2 heuristic. Open to alternative if RA prefers.
+- **Port-validation criterion**: 5 pts on ≥2 datasets per baseline, as specified in the dependencies section of the inquiry.
+
+## 4. Open questions for RA
+
+Clarifications that would help before implementation lands on the new branch. None are blockers for Phase 1 / Phase 2 start.
+
+1. **SQLite vs RDBMS**: is SQLite acceptable even if worker count needs to exceed ~16 per study (e.g., on arxiv, where trials are long)? If so, any guidance on max? Alternative would be a Postgres instance on the CPU partition.
+2. **Per-baseline port-validation datasets**: which datasets each of BGRL / GGD / GraphMAE2 / GraphACL must pass the 5-pt-on-≥2 bar against? Draft from paper-reported coverage in `batch-02-phase2-baseline-ports.md`; RA confirmation appreciated.
+3. **FLOPs measurement tool**: `fvcore` the intended tool, or alternative (e.g., `ptflops`, custom `torch.profiler`-based counter)?
+4. **Config A SQLite DB**: paper reproducibility artifact (published alongside code), or internal-only?
+5. **Config C.3 readout cells already covered by Config A**: Config A searches over {C0, C1, C2} per-dataset and reports one winner. For C.3's full 6×7 table, the two non-winning readouts among {C0, C1, C2} per dataset would need re-runs at tuned HPs. Flagging so RA confirms whether "Config A's non-winner readouts" get their own rerun sweep or can be copied from Config A's top-5 confirmation artifacts if they happen to appear there.
+
+## 5. Results
+
+None. This response acknowledges the plan only. Per-phase results will be appended under `# RESULTS — Phase X` sections as each batch completes, per the inquiry's Expected response format.
+
