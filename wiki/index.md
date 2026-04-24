@@ -41,6 +41,8 @@ Catalog of every page in this wiki. Read first when answering a query; drill int
 - [[GraphACL]] — augmentation-free, heterophily (NeurIPS 2023).
 - [[PolyGCL]] — spectral polynomial views (ICLR 2024).
 - [[Less is More]] — **closest concurrent work** (arxiv / ICLR 2026 submission).
+- [[MHVGCL]] — multi-hop views contrastive SSL (Applied Soft Computing 2025); **closest architectural ancestor of D6c** — same loss family, different propagation order.
+- [[DGD]] — decoupled-GCN + group discrimination (Neurocomputing 2024); low pre-emption risk.
 - [[GPRGNN]] — learned global polynomial coefficients, supervised (ICLR 2021).
 - [[APPNP]] — teleport-based propagation, supervised (ICLR 2019).
 - [[ATP]] — per-node adaptive propagation, supervised (2024).
