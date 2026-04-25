@@ -3,8 +3,8 @@ title: Splits and Protocol
 type: synthesis
 tags: [neurips-2026, protocol, splits, early-stopping]
 created: 2026-04-21
-updated: 2026-04-21
-sources: [[INQ-2026-04-21-001]]
+updated: 2026-04-24
+sources: [[INQ-2026-04-21-001], [[INQ-2026-04-24-002]]]
 ---
 
 # Splits and Evaluation Protocol (AD-SSL)
@@ -19,7 +19,7 @@ Rationale in one line: **AD-SSL competes on the modern SSL Pareto frontier ([[BG
 |---|---|---|---|---|
 | Planetoid (Cora, CiteSeer, PubMed) | Public `train_mask` (20/class) | Public `val_mask` (500) | Public `test_mask` (1000) | Split fixed; 5 trials vary init only. |
 | Amazon (Photo, Computers) | 10 % random | 10 % random | 80 % random | **Split is seed-determined** — `args.seed` chooses both split and init. Run **5 trials**, report mean ± 95 % CI. |
-| OGB (ogbn-arxiv, ogbn-products) | Official `dataset.get_idx_split()['train']` | Official `['valid']` | Official `['test']` | Split fixed; 5 trials vary init only (leaderboard-comparable). |
+| OGB (ogbn-arxiv, ogbn-products) | `dataset.get_idx_split()['train']` | `dataset.get_idx_split()['valid']` | `dataset.get_idx_split()['test']` | Default OGB masks; split fixed; 5 trials vary init only (leaderboard-comparable). Confirmed canonical 2026-04-24 via [[INQ-2026-04-24-002]]. |
 | ogbn-mag | **Out of scope for main table.** | — | — | If kept for smoke tests, project to paper-paper subgraph and use `split_idx['paper']['{train,valid,test}']`. Not reported. |
 
 Heterophilic graphs (Chameleon, Squirrel, Actor, Wisconsin, Texas): out of scope v1 per [[Thesis]] § Scope.
@@ -75,6 +75,23 @@ All datasets: **5 trials**, report mean ± 95 % CI (bootstrap).
 
 95 % CI via bootstrap over seeds, per [[Graph Learning Poor Benchmarks]] calibration. Paired t-test when comparing AD-SSL configs with matched seeds — see [[Matched-Seed Delta]].
 
+## HPO selection metric (locked 2026-04-24 via [[INQ-2026-04-24-002]])
+
+For Config A (Optuna HPO on D6c), both **early-stop metric** and **HPO ranking metric** are unified to **val-acc** (linear probe on the val split). Never InfoNCE loss, never test-acc. Eval frequency every 10 epochs; min_delta = 0; patience 20 eval cycles (= 200 epochs without val-acc improvement); max_epochs = 10000 ceiling. **Never peek at test labels during HPO.**
+
+Fidelity protocol: 3 seeds × 3 probe restarts (n=9) during search; 5 × 5 (n=25) for top-5 confirmation and final headline. N=5 default; bump to N=10 only if final-eval stderr > 0.5 pts on any dataset.
+
+## Port-validation rule for matched-harness baselines (locked 2026-04-24 via [[INQ-2026-04-24-002]])
+
+Each baseline ported into the matched harness (BGRL, GGD, GraphMAE2, GraphACL) must reproduce its paper-reported accuracy to **within 5 pts on at least 2 datasets** before its row counts in Config B or the main accuracy table. Recommended pairings (one large + one small per baseline):
+
+- BGRL — arxiv (71.64 ± 0.12) + Computers (90.34 ± 0.19)
+- GGD — arxiv (71.64 ± 0.50) + Cora
+- GraphMAE2 — arxiv (71.95 ± 0.08) + Cora (84.50)
+- GraphACL — arxiv (71.72 ± 0.26) + Photo (93.31)
+
+Each port must hit at least one large-graph (arxiv) target so validation happens at scale, not only on small graphs.
+
 ## Downstream tasks not covered here
 
 `link` (link prediction) and `clu` (clustering) keep their current single-eval-at-end behavior — out of scope for [[INQ-2026-04-21-001]]. Revisit when those tasks enter the main table.
@@ -83,6 +100,7 @@ All datasets: **5 trials**, report mean ± 95 % CI (bootstrap).
 
 - [[INQ-2026-04-21-001]] — the inquiry that locked splits + early stopping.
 - [[INQ-2026-04-22-001]] — B0 loss swap + Â¹X baseline-gate policy.
+- [[INQ-2026-04-24-002]] — master experimental plan: HPO selection metric, port-validation rule, OGB split confirmed.
 - [[Ablation Plan - AD-SSL B0 A1-A4]] — consumes this protocol.
 - [[Matched-Seed Delta]] — significance criterion.
 - [[Graph Learning Poor Benchmarks]] — CI + paired-test calibration.

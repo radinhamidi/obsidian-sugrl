@@ -3,8 +3,8 @@ title: Reviewer Attacks and Defenses
 type: synthesis
 tags: [neurips-2026, reviewers, risk]
 created: 2026-04-21
-updated: 2026-04-21
-sources: [[RESEARCH_AGENT_ONBOARDING]]
+updated: 2026-04-24
+sources: [[RESEARCH_AGENT_ONBOARDING], [[INQ-2026-04-24-002]]]
 ---
 
 # Reviewer Attacks and Defenses
@@ -29,6 +29,8 @@ required evidence — missing evidence is a submission blocker.
 | "[[GraphMAE2]] is the only thing that transfers at papers100M scale ([[GSTBench]])." | True in GSTBench's setup. That's why we scope AD-SSL to per-dataset Pareto, not foundation-model pretraining. We also view feature reconstruction as complementary — a hybrid (bootstrap + feature recon) is a clear follow-up. | Explicit scoping in introduction; no "foundation model" framing. Optional: small transfer probe as appendix. |
 | "Contrastive methods don't transfer (GSTBench)." | We're not making a transfer claim. Per-dataset Pareto in the Pareto Gap framing ([[Pareto Gap]]). | Introduction must not over-claim; related work must cite GSTBench honestly. |
 | "[[BLNN]] already enriches BGRL with structural positives — what's new?" | BLNN enriches positives along the **spatial** axis (1-hop neighbors with attention). AD-SSL enriches along the **depth** axis (multi-hop precomputed views with per-node weighting). Different mechanisms, stackable in principle. BLNN also keeps BGRL's augmentation pair and full GNN encoder — AD-SSL is augmentation-free and MLP-only. | Related-work paragraph positioning BLNN as a concurrent orthogonal extension. Optional: cite BLNN numbers on their 5 small graphs if we run there. |
+| "[[MHVGCL]] is the same method — same InfoNCE-over-hops loss, same concat readout." | Loss family and readout overlap is real; mechanism differs. (1) Encoder-free precompute (D6c) vs. trainable linear encoder + per-epoch propagation (MHVGCL). (2) Per-depth W_k with residual `Z_k = X_k + W_k X_k` (load-bearing — D6a/D6b without residual fail Computers by −5.14/−7.21) vs. single shared W. (3) Raw `Â^k X` contrast vs. ELU-nonlinear iterative-fusion contrast that loses raw-feature reference. (4) The cross-depth contrast axis is load-bearing for D6c — Config C.2 B2 (per-depth-independent InfoNCE) isolates it. (5) MHVGCL does not report ogbn-arxiv (few-shot 1–4 label scope); D6c +8.05 arxiv unchallenged. | **Config C.2 B2** ablation (per-depth-independent InfoNCE): if B2 degrades materially, the cross-depth axis is confirmed load-bearing. **Config B** efficiency benchmark: MHVGCL cited paper-as-reported (no public code located 2026-04-24); per-epoch-propagation cost story made via D6c precompute-once vs. encoder-methods cost band. See [[MHVGCL]] and [[INQ-2026-04-24-002]] § Config C.2. |
+| "[[DGD]] is the same — decoupled GCN + SSL on precomputed features." | Different loss family (BCE group discrimination, GGD descendant) and different contrast axis (real-node-vs-corrupted-node, not depth-vs-depth). DGD uses a single fixed k at training; the m=10 `A^m H_θ` skip is a post-hoc inference merge, not a contrastive axis. **Low risk.** | Related-work paragraph: D6c shares decoupled-precompute lineage but introduces depth-as-view contrastive axis. See [[DGD]]. |
 | "Marginal gains without statistical significance ([[Graph Learning Poor Benchmarks]])." | 95% CIs + paired t-tests on every reported number. 100-run bootstrap following [[APPNP]]'s protocol on small graphs. | Stats infrastructure in eval harness (Coding Agent inquiry). |
 
 ## NeurIPS 2026 norms (signals from recent ICLR/NeurIPS discourse)
@@ -60,4 +62,6 @@ Calibration reference: [Graph Learning Will Lose Relevance Due To Poor Benchmark
 - [ ] ATP's HPC (High-Deg edge masking) — should we adopt as preprocessing? Would strengthen scale claims and match their framework. Small appendix ablation.
 - [ ] Global-γ SSL ablation (no per-node α) — **load-bearing** for the novelty claim vs [[GPRGNN]]. Must be in the main ablation table.
 - [ ] 95% CI + paired t-test infrastructure in eval harness — required by [[Graph Learning Poor Benchmarks]] calibration.
+- [ ] Efficiency benchmark with FLOPs (not just wall-clock + memory) — locked into Config B per [[INQ-2026-04-24-002]] using `fvcore.FlopCountAnalysis` with `flops_total ≈ 3 × flops_forward` heuristic. Hardware-independent cost story complements wall-clock for the Pareto figure.
+- [ ] Config C.2 B2 (per-depth-independent InfoNCE) — load-bearing for the [[MHVGCL]] defense. Must isolate that the cross-depth axis (not the loss family alone) drives D6c's gains.
 - [x] ~~Small appendix transfer probe (papers100M-pretrain → one downstream).~~ **Out of scope (2026-04-21).** AD-SSL operates in the per-dataset regime, field default. See [[Thesis]] § Scope.

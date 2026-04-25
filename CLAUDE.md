@@ -82,6 +82,21 @@ Check for: contradictions, orphan pages, missing cross-references, stale claims,
 
 When an inquiry locks a protocol decision (splits, early stopping, significance, etc.), **propagate** to every page that depends on it. Past example: [[INQ-2026-04-21-001]] locked 5 trials on every dataset → had to update [[Ablation Plan - AD-SSL B0 A1-A4]] (old "3 for screening / 5 for headline") and [[Matched-Seed Delta]] (old 3/3 bar → 5/5). Grep for the old value across `wiki/` before closing the inquiry.
 
+### RA stays in its lane on inquiries
+
+When drafting an inquiry's `## Dependencies + execution order` section (or any section that risks crossing into CA's territory), you specify **only**:
+
+- The order in which experiments depend on each other (Phase 1 → Phase 2 → Phase 3).
+- Side notes that flag scientific (not operational) concerns.
+
+You do **not** specify: parallelization choices, worker counts, storage backends (SQLite vs Postgres), wall-clock estimates, partition / QoS / scheduler choices, or which-baseline-on-which-GPU. Those are CA's calls. If CA needs a clarification on an operational tradeoff, they ask via the response section.
+
+### Apply baseline-selection criteria uniformly
+
+When deciding which baselines port into a matched harness vs. cite paper-as-reported, define an explicit criteria set (e.g., (a) recency, (b) SOTA-tier accuracy, (c) scalability claim, (d) public code, (e) runs on our hardware) and apply it **uniformly to every candidate** — no special cases for predecessor methods, codebase ancestors, or sentimentally-relevant baselines. SUGRL is just a baseline like any other; if it fails a criterion it stays cited-only.
+
+**Protocol mismatch is not a port-exclusion criterion** for an efficiency benchmark — the matched harness re-measures wall-clock and memory regardless of whatever split the original paper used.
+
 ### Inquiry (to/from Coding Agent)
 
 All inter-agent communication goes through `raw/inquiries/`. See `raw/inquiries/TEMPLATE.md`.

@@ -74,10 +74,9 @@ Status values: `live`, `testing`, `closed-falsified`, `closed-superseded`, `back
   5. "Graph MAE-style methods already cover pre-training at precompute-cheap." Defense: MAE methods require a full GNN encoder + decoder per epoch; D6c has neither.
   - **Remaining audit gaps:** "hop-level contrastive" + "multi-scale contrastive" second-pass surfaced MHVGCL + DGD; no direct "Â^k vs Â^{k'} InfoNCE at precompute with per-depth W_k" paper has emerged. Still worth targeted search on "SGC-contrastive" and hierarchical GCL variants.
 - **Live work queued on CA side:**
-  1. Extension to more homophilic datasets (CiteSeer, PubMed, Photo, CS) — headline table expansion.
-  2. Efficiency benchmark vs BGRL/GraphMAE/PolyGCL on matched hardware — Pareto figure.
-  3. K_SET ablation (what happens with {0,1,2,4} or {0,1,2,4,8,16}?).
-  4. τ_c (InfoNCE temperature) sweep.
+  1. ✅ Phase 2 dataset extension (CiteSeer, PubMed, Photo, CS) — closed by [[INQ-2026-04-24-001]]; 7/7 homophilic pass.
+  2. ✅ Matched-harness D6c vs SUGRL on Cora/Computers/arxiv — closed by [[INQ-2026-04-24-001]] rerun; D6c +0.30 / +4.86 / +5.17.
+  3. **Master experimental plan locked 2026-04-24 ([[INQ-2026-04-24-002]]).** Phase 1 = Config A (Optuna HPO per dataset, 7 studies, val-acc selection, 3×3 search → 5×5 confirmation). Phase 2 = baseline ports (BGRL + GGD + GraphMAE2 + GraphACL via uniform port-selection criteria; SUGRL retained as no-cost). Phase 3 = Configs B (efficiency: wall-clock + memory + FLOPs + precompute), C.1 (architecture A0–A5), C.2 (loss B0–B3, including B2 per-depth-independent InfoNCE for [[MHVGCL]] defense), C.3 (readout C0–C5), C.4 (K-sweep D0–D5), D (sensitivity on 3 representative datasets), E (mechanism diagnostics: per-depth lift, cos(W_k, W_k'), ‖W_k‖_F, alignment+uniformity, simplex-collapse, per-node depth preference). Posture A: D6c HPO-tuned, baselines cited as-reported. CA acknowledged plan; RESPONSE #2 closed clarifying questions (SQLite up to ~20 workers, fvcore approved, port-validation pairings, C.3 = 875 new runs).
 
 ## Backlog — candidates for next live direction
 

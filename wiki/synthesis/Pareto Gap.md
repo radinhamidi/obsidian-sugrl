@@ -12,8 +12,12 @@ Framing for the paper's problem statement. Numbers updated 2026-04-24 to reflect
 
 ## The axes
 
-- **x-axis:** wall-clock (or per-epoch cost) on ogbn-arxiv.
-- **y-axis:** accuracy on ogbn-arxiv (linear/CE probe on frozen embeddings, official split).
+The Pareto figure ships in **two variants** (locked 2026-04-24 via [[INQ-2026-04-24-002]] § Config B):
+
+- **Variant 1**: accuracy × **wall-clock** (hardware-dependent; matched on Vector A40-48GB).
+- **Variant 2**: accuracy × **training FLOPs** (hardware-independent; measured via `fvcore.FlopCountAnalysis`, `flops_total ≈ 3 × flops_forward` heuristic, documented in methods footnote).
+
+Both x-axes log-scaled. Matched-harness points (D6c + BGRL + GGD + GraphMAE2 + GraphACL) plotted as solid markers; paper-cited baselines (DGI/MVGRL/GRACE/CCA-SSG/SUGRL/PolyGCL/DGD/MHVGCL/BLNN) as faded markers with hardware-caveat footnote. y-axis: accuracy on ogbn-arxiv (linear/CE probe on frozen embeddings, official split).
 
 ## The frontier (sketch — updated 2026-04-24 with D6c arxiv number)
 
@@ -73,7 +77,7 @@ The +8.05 on arxiv is the headline: moving from best-single-depth precomputed fe
 ## How we'll defend this framing
 
 - **Main Pareto figure** in the paper (accuracy × wall-clock) that plots D6c against cheap-method baselines (SUGRL, GGD-256, GGD-1500) AND against BGRL/GraphMAE/GraphACL/PolyGCL at their true cost. D6c wins the cheap-method region; we do NOT claim global Pareto.
-- **Efficiency benchmark** — reproduce baselines in our environment, report wall-clock on matched hardware. Pending as CA inquiry (slate item 4 from 2026-04-24 triage).
+- **Efficiency benchmark** — reproduce baselines in our matched harness, report **wall-clock + peak GPU memory + training FLOPs + precompute cost** on Vector A40-48GB. Locked into Config B of [[INQ-2026-04-24-002]]; ports = BGRL, GGD, GraphMAE2, GraphACL.
 - **Per-depth lift decomposition** — show the mechanism in numbers: raw k=0 → D6c k=0 on Cora is +29.62; raw k=8 → D6c k=8 on arxiv is +16.92. W_k is lifting weak depths, not just picking the best.
 
 See [[Reviewer Attacks and Defenses]] for anticipated pushback (needs 2026-04-24 update).

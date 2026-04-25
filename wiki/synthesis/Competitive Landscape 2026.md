@@ -3,13 +3,17 @@ title: Competitive Landscape 2026
 type: synthesis
 tags: [neurips-2026, related-work, baselines]
 created: 2026-04-21
-updated: 2026-04-21
+updated: 2026-04-24
 sources: [[RESEARCH_AGENT_ONBOARDING]]
 ---
 
-# Competitive Landscape (as of 2026-04-21)
+# Competitive Landscape (as of 2026-04-24)
 
-Snapshot of where unsupervised graph representation learning stands on the axes AD-SSL competes on: **accuracy**, **scalability / wall-clock**, **augmentation-free-ness**, **adaptive depth**.
+Snapshot of where unsupervised graph representation learning stands on the axes D6c competes on: **accuracy**, **scalability / wall-clock**, **augmentation-free-ness**, **multi-depth contrastive views**.
+
+## Comparison posture (locked 2026-04-24 via [[INQ-2026-04-24-002]])
+
+**Posture A**: D6c is HPO-tuned via Optuna per dataset (Config A); baselines are cited as-reported (their authors already tuned). Posture B (port-and-re-tune all baselines) was rejected as unnecessary cost. Implication for the main table: blank cells where a paper used a non-dominant split or did not report; no extrapolation. See [[INQ-2026-04-24-002]] § Baseline accuracy audit.
 
 ## Efficiency champions
 
@@ -32,6 +36,32 @@ All numbers verified against source PDFs (2026-04-21 audit).
 | [[GraphACL]] | NeurIPS 2023 | 71.72 ± 0.26 | Asymmetric contrastive, augmentation-free, heterophily-aware |
 | [[PolyGCL]] | ICLR 2024 | not reported on ogbn-arxiv | Learnable polynomial spectral filters; reports arXiv-year 43.07 (heterophilic label variant) |
 | [[BLNN]] | arXiv 2024-08 | not reported on ogbn-arxiv | BGRL + neighbor-positive alignment; 5 small graphs only |
+| [[DGD]] | Neurocomputing 2024 | not reported on ogbn-arxiv | Decoupled-GCN + BCE group discrimination |
+| [[MHVGCL]] | ASOC 2025 | not reported on ogbn-arxiv | Multi-hop APPNP-style nonlinear views + InfoNCE; few-shot regime |
+
+## Main-table baseline set (locked 2026-04-24 via [[INQ-2026-04-24-002]])
+
+13 methods, partitioned into **classical** (pre-2022 references every graph-SSL paper reports) and **modern** (2022+ SOTA tier).
+
+**Classical tier** — DGI (ICLR 2019), MVGRL (ICML 2020), GRACE (ICML 2020), CCA-SSG (NeurIPS 2021).
+
+**Modern tier** — [[SUGRL]] (AAAI 2022), [[BGRL]] (ICLR 2022), [[GGD]] (NeurIPS 2022), [[GraphMAE2]] (WWW 2023, supersedes [[GraphMAE]] which moves to §2 predecessor citation), [[GraphACL]] (NeurIPS 2023), [[PolyGCL]] (ICLR 2024), [[DGD]] (Neurocomputing 2024), [[MHVGCL]] (ASOC 2025), [[BLNN]] (arXiv 2024).
+
+Cells are blank where the paper used a non-dominant split or did not report. See [[INQ-2026-04-24-002]] § Baseline accuracy audit for the full per-cell table.
+
+## Port-selection criteria for Config B efficiency benchmark (locked 2026-04-24)
+
+For a baseline to be **ported into the matched harness** (vs. cited paper-as-reported on accuracy axis only) it must satisfy **all** of:
+
+- (a) **Recency** — 2022 or later.
+- (b) **SOTA-tier accuracy** on at least one of our benchmark datasets, as reported by the paper itself. Accuracy-protocol mismatch with our dominant protocol is **not** a disqualifier — the harness re-measures.
+- (c) **Explicit scalability claim** — reports ogbn-arxiv or comparable large graph, or asserts linear-in-N complexity.
+- (d) **Maintained public code** — reference implementation must exist.
+- (e) **Runs at arxiv scale on our hardware** — no OOM on a single A40-48GB.
+
+Strict intersection yields **4 ports**: BGRL, GGD, GraphMAE2, GraphACL. Plus D6c (native). [[SUGRL]] fails (b) at 68.83 < 71 SOTA tier; retained from existing INQ-008 harness work as no-cost addition. PolyGCL fails (e) (OOM on arxiv). DGD/MHVGCL/BLNN cited paper-as-reported (no public code located, or scope mismatch with arxiv coverage). See [[INQ-2026-04-24-002]] § Config B for full audit table.
+
+**Important**: protocol mismatch with our dominant split is NOT a port-exclusion criterion — the matched harness re-measures wall-clock and memory regardless. Earlier framing that treated "uses a different split" as exclusion was incorrect.
 
 ## Concurrent work to monitor
 
